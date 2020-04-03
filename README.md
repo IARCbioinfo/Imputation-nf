@@ -9,15 +9,14 @@
 ![Workflow representation](template-nf.png)
 
 ## Description
-The pipeline used to perform the imputation of several targets datasets processed with standard input with the use of a reference dataset (here, hapmap dataset).
+The pipeline used to perform the imputation of several targets datasets processed with standard input.
 
 Here is a summary of the method:
-- Preprocessing of reference/target dataset if necessary : filtration using by liftOver, plink and perl command line
-- First filtration's step of dataset with bash and plink command lines to keep only the SNPs of interest
-- Merge of both datasets
-- Run admixture tools to associate each reference sample to the correct origin
-- Second filtration's step from the start target dataset to keep only the samples by ancerstry population and to perform a sex checking by population
--
+- Preprocessing of target dataset if necessary : by using the nextflow script Preparation_dataset.nf which take the dataset plink file (.bed/.bim/.fam) in input.
+- First step : Origin estimation of several population from the target dataset by using admixture tools and a dataset of reference.
+- Secon step : SNPs filtering by population.
+
+See the Usage section to test the full pipeline with the HGDP dataset like admixture's reference.
 
 ## Dependencies
 The pipeline works under Linux distributions.
@@ -33,7 +32,7 @@ The pipeline works under Linux distributions.
 - BcfTools : conda install bcftools
 
 3. File to download :
-- [Hapmap Dataset](zzz.bwh.harvard.edu/plink/dist/hapmap_r23a.zip) : as reference's dataset
+- [Hapmap Dataset](zzz.bwh.harvard.edu/plink/dist/hapmap_r23a.zip) : as reference's dataset for admixture
 - [HGDP Dataset](http://www.hagsc.org/hgdp/data/hgdp.zip) : for the dataset's test, you have to use the toMap.py & toPed.py in the 'converstion' directory to convert files in the .map/.ped plink format. Next you have to convert this last output in the .bed/.bam/.fam plink format by using plink line command and run the imputation's pipeline.
 - Perl tools : [1](https://www.well.ox.ac.uk/~wrayner/tools/HRC-1000G-check-bim-v4.2.11.zip) & [2](https://www.well.ox.ac.uk/~wrayner/tools/1000GP_Phase3_combined.legend.gz)
 - [LiftOver tools](http://hgdownload.cse.ucsc.edu/goldenpath/hg18/liftOver/hg18ToHg19.over.chain.gz)
@@ -59,8 +58,10 @@ You can avoid installing all the external software by only installing Docker. Se
   * #### Mandatory
 | Name      | Example value | Description     |
 |-----------|---------------|-----------------|
-| --ref | hapmap_r23a | Pattern of the reference dataset which do the link with the file .bed/.bim./fam for plink |
-| --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink |
+|--input| my/directory/file | The path of the main directory. WARNING : for now, you have to create a 'data_start' directory where we cen find all the data to download before to run the script. |
+| --ref | hapmap_r23a | Pattern of the admixture's reference dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. |
+| --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. |
+|--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline |
 
   * #### Optional
 | Name      | Default value | Description     |
@@ -79,11 +80,30 @@ Flags are special parameters without value.
 
 
 ## Usage
+1. Download all the necessary file to run the full pipeline (See the dependencies section, part 3).
+2. Prepare the dataset to the imputation pipeline. Here we take the HGDP dataset as target and the Hapmap dataset as reference to run admixture tools. To make sure that the data is available to use, you have to convert the .txt's HGDP file in the good plink format. To do this, use the script toMap.py & toPed.py that you can find in the directory bin/. 
+
+  ```
+  python3 toMap.py
+  python3 toPed.py
+  ```
+  
+After you have to convert the .ped/.map file in .bed/.bim/.bam file with the use of plink line and copy it in a directory.
+  
+  ```
+  plink --map HGDP.map --ped HGDP.ped --make-bed --out HGDP
+  ```
+
+And then we can run the nextflow script to prepare the both dataset.
+
   ```
   nextflow run Preparation_dataset.nf --dataset HGDP
   nextflow run Preparation_dataset.nf --dataset hapmap_r23a
+  ```
+3. Now you can run the imputation pipline nextflow script to run the Origin estimation and the SNPs filtering steps.
 
-  nextflow run Imputation_genotypage.nf --ref hapmap_r23a --target HGDP
+  ```
+  nextflow run Imputation_genotypage.nf --ref hapmap_r23a --target HGDP --input /main_data/ --script /script/bin/
 
   ```
 
