@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
-'''
+
 file = open('/data/gep/MR_Signatures/work/Boris/protocol_min/data/HGDP_FinalReport_Forward.txt', 'r')
 list_list = [file.readline().split()]
 for lines in file.readlines():
@@ -12,7 +12,7 @@ for lines in file.readlines():
 matrix = np.array(list_list)
 np.savetxt('/data/gep/MR_Signatures/work/Boris/protocol_min/data/matrice.txt',matrix.T, fmt='%s')
 file.close()
-'''
+
 mat = open('/data/gep/MR_Signatures/work/Boris/protocol_min/data/matrice.txt', 'r')
 file2 = open('/data/gep/MR_Signatures/work/Boris/protocol_min/data/HGDP.ped', 'w')
 
