@@ -47,7 +47,7 @@ You can avoid installing all the external software by only installing Docker. Se
 ## Input
   | Type      | Description     |
   |-----------|---------------|
-  | Reference/Target Plink dataset | Corresponds to the reference's dataset and the dataset to be analyzed, both already preprocessed by filters found in the Preparation_dataset.nf. Composed by the following files : bed, bim & fam |
+  | Admixture reference/Target Plink dataset | Corresponds to the admixture reference's dataset and the dataset to be analysed, both already preprocessed by filters found in the Preparation_dataset.nf. Composed by the following files : bed, bim & fam |
 
 
 
@@ -60,8 +60,8 @@ You can avoid installing all the external software by only installing Docker. Se
 |-----------|---------------|-----------------|
 |--input| user/main_data/ | The path of the main directory. WARNING : for now, you have to create a 'user/main_data/data_start' directory where we can find all the data to download before to run the script. |
 | --ref | hapmap_r23a | Pattern of the admixture's reference dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset (for example : 'user/main_data/hapmap_r23a'). |
-| --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. |
-|--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline (for example : 'user/main_data/HGDP') |
+| --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. (for example : 'user/main_data/HGDP')|
+|--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline |
 
   * #### Optional
 | Name      | Default value | Description     |
