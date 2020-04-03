@@ -14,7 +14,7 @@ The pipeline used to perform the imputation of several targets datasets processe
 Here is a summary of the method:
 - Preprocessing of target dataset if necessary : by using the nextflow script Preparation_dataset.nf which take the dataset plink file (.bed/.bim/.fam) in input.
 - First step : Origin estimation of several population from the target dataset by using admixture tools and a dataset of reference.
-- Secon step : SNPs filtering by population.
+- Second step : SNPs filtering by population.
 
 See the Usage section to test the full pipeline with the HGDP dataset like admixture's reference.
 
@@ -81,7 +81,7 @@ Flags are special parameters without value.
 
 ## Usage
 1. Download all the necessary file to run the full pipeline (See the dependencies section, part 3).
-2. Prepare the dataset to the imputation pipeline. Here we take the HGDP dataset as target and the Hapmap dataset as reference to run admixture tools. To make sure that the data is available to use, you have to convert the .txt's HGDP file in the good plink format. To do this, use the script toMap.py & toPed.py that you can find in the directory bin/. 
+2. Prepare the dataset to the imputation pipeline. Here we take the HGDP dataset as target and the Hapmap dataset as reference to run admixture tools. To make sure that the data is available to use, you have to convert the .txt's HGDP file in the good plink format. To do this, use the script toMap.py & toPed.py that you can find in the directory bin/. (Make sure taht more that 30go of memory are free before to run the toPed.py script)
 
   ```
   python3 toMap.py
