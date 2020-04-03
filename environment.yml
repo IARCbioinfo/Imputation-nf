@@ -1,0 +1,6 @@
+name: template-nf
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - samtools=1.8
