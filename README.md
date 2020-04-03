@@ -11,12 +11,12 @@
 ## Description
 The pipeline used to perform the imputation of several targets datasets processed with standard input.
 
-Here is a summary of the method:
+Here is a summary of the method :
 - Preprocessing of target dataset if necessary : by using the nextflow script Preparation_dataset.nf which take the dataset plink file (.bed/.bim/.fam) in input.
 - First step : Origin estimation of several population from the target dataset by using admixture tools and a dataset of reference.
-- Second step : SNPs filtering by population.
+- Second step : SNPs filtering by population from the target dataset before the imputation step.
 
-See the Usage section to test the full pipeline with the HGDP dataset like admixture's reference.
+See the Usage section to test the full pipeline with the hapmap dataset like admixture's reference and HGDP dataset as target.
 
 ## Dependencies
 The pipeline works under Linux distributions.
@@ -59,8 +59,8 @@ You can avoid installing all the external software by only installing Docker. Se
 | Name      | Example value | Description     |
 |-----------|---------------|-----------------|
 |--input| user/main_data/ | The path of the main directory. WARNING : for now, you have to create a 'user/main_data/data_start' directory where we can find all the data to download before to run the script. |
-| --ref | hapmap_r23a | Pattern of the admixture's reference dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset (for example : 'user/main_data/hapmap_r23a'). |
-| --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. (for example : 'user/main_data/HGDP')|
+| --ref | hapmap_r23a | Pattern of the admixture's reference dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset (for example : 'user/main_data/hapmap_r23a/'). |
+| --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. (for example : 'user/main_data/HGDP/')|
 |--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline |
 
   * #### Optional
