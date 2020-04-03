@@ -58,10 +58,10 @@ You can avoid installing all the external software by only installing Docker. Se
   * #### Mandatory
 | Name      | Example value | Description     |
 |-----------|---------------|-----------------|
-|--input| my/directory/file | The path of the main directory. WARNING : for now, you have to create a 'data_start' directory where we cen find all the data to download before to run the script. |
-| --ref | hapmap_r23a | Pattern of the admixture's reference dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. |
+|--input| user/main_data/ | The path of the main directory. WARNING : for now, you have to create a 'user/main_data/data_start' directory where we can find all the data to download before to run the script. |
+| --ref | hapmap_r23a | Pattern of the admixture's reference dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset (for example : 'user/main_data/hapmap_r23a'). |
 | --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. |
-|--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline |
+|--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline (for example : 'user/main_data/HGDP') |
 
   * #### Optional
 | Name      | Default value | Description     |
