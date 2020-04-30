@@ -131,6 +131,7 @@ process processing_filtering1{
   file ('*.genome') into resultGenome
   file ('*.sexcheck') into resultSex
   file ('target_*.{bed,bim,fam}') into resultFiltering
+  file ('target_*.bim') into resultBim
 
   shell:
   '''
@@ -167,8 +168,6 @@ process QC_analyse{
   publishDir params.out, mode: 'copy'
 
   input:
-  //file target from resultTarget.collect()
-  //file directory from resultFiltering
   file het from resultHet.collect()
   file miss from resultHetMiss.collect()
   file genome from resultGenome.collect()
@@ -188,13 +187,15 @@ process QC_analyse{
 
 
 process processing_filtering2{
-  //publishDir params.out, mode: 'copy'
-
   input:
   file data from resultFiltering.collect()
   file data2 from Channel.fromPath(params.folder+'HRC-1000G-check-bim.pl').collect()
   file data3 from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
+
+  output:
+  file ('withFreqFiltering_*') into resultDirFiltering
+  file ('target_hwe_*.bim') into resultHW
 
   shell:
   '''
@@ -211,8 +212,8 @@ process processing_filtering2{
   ## -- 10 : AF based filter
   plink --freq --bfile target_${pop} --out target_freq_${pop}
   perl HRC-1000G-check-bim.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r 1000GP_Phase3_combined.legend -g -p ${pop2} -x
-  mkdir withFreqFiltering
-  mv *1000G* Run-plink.sh withFreqFiltering
+  mkdir withFreqFiltering_${pop}
+  mv *1000G* Run-plink.sh withFreqFiltering_${pop}
 
   ## -- 11 :  HWE filtering
   plink --bfile target_${pop} --geno 0.03 --make-bed --out target_geno_${pop}
@@ -221,20 +222,68 @@ process processing_filtering2{
 }
 
 
+process make_snp_filtering{
+  publishDir params.out, mode: 'copy'
+  input:
+  file directories from resultDirFiltering.collect()
+  file dataHW from resultHW.collect()
+  file dataBim from resultBim.collect()
+
+  output:
+  file ('filtered_snps.txt') into fileSNPS
+  file ('*.pdf') into resultFigure
+
+  shell:
+  '''
+  ## -- 12 : filtering SNP
+  Rscript !{baseDir}/bin/afterGenotyping_SNPs_filtering.r
+  '''
+}
+
 process processing_filtering3{
   input:
   file data from resultMerge2.collect()
   file data2 from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
   file data3 from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
-  file data4 from Channel.fromPath(params.input+'filtered_snps.txt').collect()
+  file data4 from fileSNPS.collect()
+
+  output:
+  file ('target5-updated-chr*') into resultChr
 
   shell:
   '''
-  ## -- 12 : removing snp
+  ## -- 13 : removing SNP
   plink --bfile target4 --exclude filtered_snps.txt --make-bed --out target5
 
   plink --freq --bfile target5 --out target6
   perl HRC-1000G-check-bim-NoReadKey.pl -b target5.bim -f target6.frq -r 1000GP_Phase3_combined.legend -g -x -n
   bash Run-plink.sh
+  '''
+}
+
+
+process processing_filtering4{
+  input:
+  file dataChr from resultChr.collect()
+  file data from Channel.fromPath(params.folder+'checkVCF.py').collect()
+  file data2 from Channel.fromPath(params.folder+'human_g1k_v37.fasta').collect()
+  val chromosome from Channel.from(1..23)
+
+  shell:
+  '''
+  chr=!{chromosome}
+
+  #Remove ambiguous strand snps and SNPs with unknown SNPs ID
+  awk '{ if (($5=="T" && $6=="A")||($5=="A" && $6=="T")||($5=="C" && $6=="G")||($5=="G" && $6=="C")) print $2, "ambig" ; else print $2 ;}' target5-updated-chr${chr}.bim | grep -v ambig | grep -v -e --- | sort -u > NonAmbiguous{chr}.snplist.txt
+  plink --bfile target5-updated-chr${chr} --extract NonAmbiguous{chr}.snplist.txt --make-bed --out target6_chr${chr}
+
+  #Create VCF / sort and zip
+  plink  --bfile target6_chr${chr} --recode vcf --out target6_chr${chr}_vcf
+  bcftools sort target6_chr${chr}_vcf.vcf  | bgzip -c  > chr${chr}.vcf.gz
+
+  #Check SNPs using check_VCF.py
+  python2 checkVCF.py -r human_g1k_v37.fasta -o after_check_${chr} chr${chr}.vcf.gz
+  bcftools norm --check-ref ws -f human_g1k_v37.fasta chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
+  python2 checkVCF.py -r human_g1k_v37.fasta -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
   '''
 }
