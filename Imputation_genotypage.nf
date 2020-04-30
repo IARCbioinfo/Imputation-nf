@@ -269,6 +269,9 @@ process processing_filtering4{
   file data2 from Channel.fromPath(params.folder+'human_g1k_v37.fasta').collect()
   val chromosome from Channel.from(1..23)
 
+  output:
+  file ('*-REFfixed.vcf.gz') into resultFilterFinal
+
   shell:
   '''
   chr=!{chromosome}
@@ -285,5 +288,42 @@ process processing_filtering4{
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check_${chr} chr${chr}.vcf.gz
   bcftools norm --check-ref ws -f human_g1k_v37.fasta chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
+  '''
+}
+
+process phasing{
+  publishDir params.out, mode: 'copy'
+
+  input:
+  val chromosome from Channel.from(1..22)
+  file data from resultFilterFinal.collect()
+
+  output:
+  file ('*.logimpute') into imputationFinal
+  
+  shell:
+  '''
+  chr=!{chromosome}
+
+  Rscript !{baseDir}/bin/create_chunks.r ${chr}
+
+  n_chunks=$(wc -l chunk_split_chr${chr}.txt | awk '{print $1}')
+  echo "chr: ${chr} n_chunks: ${n_chunks}"
+  for chunk in `seq 1 ${n_chunks}`;
+  do
+    cpu=5
+    #path_plink=${imputation_path}
+    #path_chr=${path_plink}chr_${chr}/
+    ref_haps="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
+
+    start=$(awk '{print $1}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
+    end=$(awk '{print $2}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
+
+    bcftools index -f chr${chr}-REFfixed.vcf.gz
+    /home/lipinskib/Eagle_v2.4.1/./eagle --vcfRef ${ref_haps}1000GP_chr${chr}.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /home/lipinskib/Eagle_v2.4.1/tables/genetic_map_hg19_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
+
+    ref_haps="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
+    /home/lipinskib/Minimac4/release-build/./minimac4 --refHaps ${ref_haps}${chr}.1000g.Phase3.v5.With.Parameter.Estimates.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
+  done
   '''
 }
