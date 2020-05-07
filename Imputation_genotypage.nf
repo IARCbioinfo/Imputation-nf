@@ -62,17 +62,17 @@ params.targetDir = params.input+params.target+'/'
 params.script = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/script/bin/'
 params.out = params.input // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/'
 
-process merge_admixture{
+process Admixture{
   input:
-  file data_start from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
-  file data_start from Channel.fromPath(params.refDir+"*").collect()
-  file data_start from Channel.fromPath(params.targetDir+"*").collect()
+  file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
+  file data from Channel.fromPath(params.refDir+"*").collect()
+  file data from Channel.fromPath(params.targetDir+"*").collect()
 
   output:
-  file ('target4.{bed,bim,fam}') into resultMerge
-  file ('target4.{bed,bim,fam}') into resultMerge2
-  file ('admixture_results_withGroups.txt') into resultTarget
-  file ('out_pop_admixture/') into resultAdmixture
+  file ('target4.{bed,bim,fam}') into Merge
+  file ('target4.{bed,bim,fam}') into Merge2
+  file ('out_pop_admixture/') into Admixture
+  file ('admixture_results_withGroups.txt') into Target
 
   shell:
   '''
@@ -114,24 +114,17 @@ process merge_admixture{
   ## -- 4 : First filtering step
   plink --bfile !{params.target}  --geno 0.03 --make-bed --out target3
   plink --bfile target3 --maf 0.01 --make-bed --out target4
-  '''
-}
-
-process processing_filtering1{
-  //publishDir params.out, mode: 'copy'
-
+  '''}
+process Filtering1{
   input:
-  file data from resultMerge.collect()
-  file dir from resultAdmixture.collect()
+  file data from Merge.collect()
+  file data from Admixture.collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
 
   output:
-  file ('*.het') into resultHet
-  file ('*.imiss.txt') into resultHetMiss
-  file ('*.genome') into resultGenome
-  file ('*.sexcheck') into resultSex
-  file ('target_*.{bed,bim,fam}') into resultFiltering
-  file ('target_*.bim') into resultBim
+  file ('*.{het,imiss.txt,genome,sexcheck}') into QC
+  file ('target_*.bim') into Bim
+  file ('target_*.{bed,bim,fam}') into TargetFilter
 
   shell:
   '''
@@ -160,42 +153,35 @@ process processing_filtering1{
   awk 'NR>1 {print $1,$2,$3,$5,($5-$3)/$5}' het_${pop}.het >> het_${pop}.txt
   plink --bfile target_${pop} --missing --out miss_${pop}
   awk 'NR==FNR {a[$1,$2]=$5;next}($1,$2) in a{print $1,$2,$6,a[$1,$2]}' het_${pop}.txt miss_${pop}.imiss > het_${pop}.imiss.txt
-  '''
-}
-
-
-process QC_analyse{
+  '''}
+process QC1{
   publishDir params.out, mode: 'copy'
 
   input:
-  file het from resultHet.collect()
-  file miss from resultHetMiss.collect()
-  file genome from resultGenome.collect()
-  file sexcheck from resultSex.collect()
-  file target from resultTarget.collect()
+  file data from QC.collect()
+  file target from Target.collect()
 
   output:
-  file ('postGenotyping_samples_QCs.pdf') into resultFigureQC
-  file ('selected_samples_afterSamplesQCsChecking.txt') into resultTableQC
+  file ('postGenotyping_samples_QCs.pdf') into FigureQC1
+  file ('selected_samples_afterSamplesQCsChecking.txt') into TableQC1
 
   shell:
   '''
   ## -- 9 : Figure time
   Rscript !{baseDir}/bin/after_genotyping_qc.r
-  '''
-}
-
-
-process processing_filtering2{
+  '''}
+process Filtering2{
   input:
-  file data from resultFiltering.collect()
-  file data2 from Channel.fromPath(params.folder+'HRC-1000G-check-bim.pl').collect()
-  file data3 from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
+  file data from TargetFilter.collect()
+  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim.pl').collect()
+  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
 
   output:
-  file ('withFreqFiltering_*') into resultDirFiltering
-  file ('target_hwe_*.bim') into resultHW
+  file ('withFreqFiltering_*') into DirFiltering
+  file ('target_hwe_*.bim') into HWresult
+  file ('target_freq_*.frq') into FreqResult
+  file ('ID-target_*-1000G.txt') into FreqResultId
 
   shell:
   '''
@@ -213,42 +199,39 @@ process processing_filtering2{
   plink --freq --bfile target_${pop} --out target_freq_${pop}
   perl HRC-1000G-check-bim.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r 1000GP_Phase3_combined.legend -g -p ${pop2} -x
   mkdir withFreqFiltering_${pop}
-  mv *1000G* Run-plink.sh withFreqFiltering_${pop}
+  cp *1000G* Run-plink.sh withFreqFiltering_${pop}
 
   ## -- 11 :  HWE filtering
   plink --bfile target_${pop} --geno 0.03 --make-bed --out target_geno_${pop}
   plink --bfile target_geno_${pop} --hwe 1e-8 --make-bed --out target_hwe_${pop}
-  '''
-}
-
-
-process make_snp_filtering{
+  '''}
+process Make_SNP_Filtering{
   publishDir params.out, mode: 'copy'
   input:
-  file directories from resultDirFiltering.collect()
-  file dataHW from resultHW.collect()
-  file dataBim from resultBim.collect()
+  file data from DirFiltering.collect()
+  file data from HWresult.collect()
+  file data from Bim.collect()
 
   output:
-  file ('filtered_snps.txt') into fileSNPS
+  file ('filtered_snps.txt') into SNPsFilter
+  file ('filtered_snps.txt') into SNPsFilter2
   file ('*.pdf') into resultFigure
 
   shell:
   '''
   ## -- 12 : filtering SNP
   Rscript !{baseDir}/bin/afterGenotyping_SNPs_filtering.r
-  '''
-}
-
-process processing_filtering3{
+  '''}
+process Filtering3{
   input:
-  file data from resultMerge2.collect()
-  file data2 from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  file data3 from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
-  file data4 from fileSNPS.collect()
+  file data from Merge2.collect()
+  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
+  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
+  file data from SNPsFilter.collect()
 
   output:
-  file ('target5-updated-chr*') into resultChr
+  file ('target5-updated-chr*') into TargetChr
+  file ('ID-target5-1000G.txt') into TargetID
 
   shell:
   '''
@@ -258,19 +241,49 @@ process processing_filtering3{
   plink --freq --bfile target5 --out target6
   perl HRC-1000G-check-bim-NoReadKey.pl -b target5.bim -f target6.frq -r 1000GP_Phase3_combined.legend -g -x -n
   bash Run-plink.sh
-  '''
-}
+  '''}
+process QC2{
+  publishDir params.out, mode: 'copy'
 
-
-process processing_filtering4{
   input:
-  file dataChr from resultChr.collect()
-  file data from Channel.fromPath(params.folder+'checkVCF.py').collect()
-  file data2 from Channel.fromPath(params.folder+'human_g1k_v37.fasta').collect()
-  val chromosome from Channel.from(1..23)
+  file data from SNPsFilter2.collect()
+  file data from FreqResult.collect()
+  file data from FreqResultId.collect()
+  file data from TargetID.collect()
+  val rspop from Channel.from("CEU","CHB_JPT","YRI")
+  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
 
   output:
-  file ('*-REFfixed.vcf.gz') into resultFilterFinal
+  file ('*.pdf') into FigureQC2
+
+  shell:
+  '''
+  head -n1 1000GP_Phase3_combined.legend >> ref_freq_withHeader.txt
+  grep -Fwf <(awk '{print $2}' ID-target5-1000G.txt) <(cat 1000GP_Phase3_combined.legend) > ref_freq.txt
+  cat ref_freq.txt >> ref_freq_withHeader.txt
+
+  pop=!{rspop}
+
+  if [ $pop = "CEU" ]; then
+    pop2="EUR"
+  elif [ $pop = "CHB_JPT" ]; then
+    pop2="EAS"
+  else
+    pop2="AFR"
+  fi
+
+  ## -- 9 : Figure time
+  Rscript !{baseDir}/bin/preImputation_QC_plots.r ${pop} ${pop2}
+  '''}
+process Filtering4{
+  input:
+  file data from TargetChr.collect()
+  file data from Channel.fromPath(params.folder+'checkVCF.py').collect()
+  file data from Channel.fromPath(params.folder+'human_g1k_v37.fasta').collect()
+  val chromosome from 1..23
+
+  output:
+  file ('*-REFfixed.vcf.gz') into FilterFinal
 
   shell:
   '''
@@ -288,42 +301,70 @@ process processing_filtering4{
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check_${chr} chr${chr}.vcf.gz
   bcftools norm --check-ref ws -f human_g1k_v37.fasta chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
-  '''
-}
+  '''}
+process Make_Chunks{
+  input:
+  val chromosome from 1..22
 
-process phasing{
+  output:
+  env chunks into NbChunk
+  tuple env(chunks), val(chromosome) into InfoChrChunk
+  file ('*.txt') into ChunkSplit
+
+  shell:
+  """
+  chr=$chromosome
+  Rscript $baseDir/bin/create_chunks.r \${chr}
+  chunks=\$(wc -l chunk_split_chr\${chr}.txt | awk '{print \$1}')
+  """}
+process Make_Multiprocess{
+  input:
+  val merge from InfoChrChunk.toList()
+
+  output:
+  file 'liste.txt' into NbChr
+
+  shell:
+  '''
+  #!/usr/bin/env python3
+
+  file=open('liste.txt','w')
+  a=!{merge}
+  for tuples in a:
+     for i in range(0,tuples[0]):
+        file.write(str(tuples[1]) + '\\n')
+
+  file.close()
+  '''}
+process Imputation{
+  validExitStatus 0, 255
   publishDir params.out, mode: 'copy'
 
   input:
-  val chromosome from Channel.from(1..22)
-  file data from resultFilterFinal.collect()
+  val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
+  val chromosomes from NbChr.splitText()
 
-  output:
-  file ('*.logimpute') into imputationFinal
-  
+  file data from FilterFinal.collect()
+  file data from ChunkSplit.collect()
+
+  //output:
+  //tuple val(chromosome), env(n_chunks) into imputationFinal
+
   shell:
   '''
-  chr=!{chromosome}
+  chr=!{chromosomes}
+  chunk=!{chunks}
+  echo "chr: ${chr} n_chunks: ${chunk}"
 
-  Rscript !{baseDir}/bin/create_chunks.r ${chr}
+  cpu=1
 
-  n_chunks=$(wc -l chunk_split_chr${chr}.txt | awk '{print $1}')
-  echo "chr: ${chr} n_chunks: ${n_chunks}"
-  for chunk in `seq 1 ${n_chunks}`;
-  do
-    cpu=5
-    #path_plink=${imputation_path}
-    #path_chr=${path_plink}chr_${chr}/
-    ref_haps="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
+  ref_haps="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
+  start=$(awk '{print $1}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
+  end=$(awk '{print $2}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
 
-    start=$(awk '{print $1}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
-    end=$(awk '{print $2}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
+  bcftools index -f chr${chr}-REFfixed.vcf.gz
+  eagle --vcfRef ${ref_haps}1000GP_chr${chr}.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /home/lipinskib/Eagle_v2.4.1/tables/genetic_map_hg19_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
 
-    bcftools index -f chr${chr}-REFfixed.vcf.gz
-    /home/lipinskib/Eagle_v2.4.1/./eagle --vcfRef ${ref_haps}1000GP_chr${chr}.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /home/lipinskib/Eagle_v2.4.1/tables/genetic_map_hg19_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
-
-    ref_haps="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
-    /home/lipinskib/Minimac4/release-build/./minimac4 --refHaps ${ref_haps}${chr}.1000g.Phase3.v5.With.Parameter.Estimates.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
-  done
-  '''
-}
+  ref_haps="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
+  minimac4 --refHaps ${ref_haps}${chr}.1000g.Phase3.v5.With.Parameter.Estimates.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
+  '''}
