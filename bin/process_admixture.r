@@ -4,7 +4,7 @@ K=3
 admixture_Q=read.table(paste0("merge.",K,".Q"),header = F)
 n_groups=ncol(admixture_Q)
 
-target_name = "HGDP"
+target_name = as.character(commandArgs(TRUE)[1])
 ref_samples=read.table("ref_samples.txt",stringsAsFactors=F,header=F)
 
 infered_ancestry_samples=read.table("merge.fam",stringsAsFactors=F,header=F)

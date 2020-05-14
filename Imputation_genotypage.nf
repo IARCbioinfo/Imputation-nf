@@ -68,11 +68,13 @@ process Admixture{
   file data from Channel.fromPath(params.refDir+"*").collect()
   file data from Channel.fromPath(params.targetDir+"*").collect()
 
+
   output:
   file ('target4.{bed,bim,fam}') into Merge
   file ('target4.{bed,bim,fam}') into Merge2
   file ('out_pop_admixture/') into Admixture
   file ('admixture_results_withGroups.txt') into Target
+
 
   shell:
   '''
@@ -88,7 +90,7 @@ process Admixture{
   ## -- Get common SNPs -- ##
   grep -Fwf <(cat ref_SNPs.txt) <(awk '{print $2}' target.bim)  > target_common_SNPs.txt
   awk -F ":" '{print $1}' target_common_SNPs.txt > ref_common_SNPs.txt
-  paste target_common_SNPs.txt  ref_common_SNPs.txt > change_ID.txt
+  paste target_common_SNPs.txt ref_common_SNPs.txt > change_ID.txt
 
 
   ## -- 2 : Extract the genotypes associated to these common SNPs + merge of the dataset
@@ -107,7 +109,7 @@ process Admixture{
   Rscript !{baseDir}/bin/create_pop_file.r merge.fam ind_pop.txt merge.pop
   K=3
   admixture --cv merge.bed $K --supervised -j40 | tee log${K}.out
-  Rscript !{baseDir}/bin/process_admixture.r #### regarder les sorties pour chopper les id
+  Rscript !{baseDir}/bin/process_admixture.r !{params.target} #### regarder les sorties pour chopper les id
 
 
   ############################################################################################
@@ -121,10 +123,12 @@ process Filtering1{
   file data from Admixture.collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
 
+
   output:
   file ('*.{het,imiss.txt,genome,sexcheck}') into QC
   file ('target_*.bim') into Bim
   file ('target_*.{bed,bim,fam}') into TargetFilter
+
 
   shell:
   '''
@@ -167,13 +171,13 @@ process QC1{
 
   shell:
   '''
-  ## -- 9 : Figure time
+  ## -- 9 : Figure QC1
   Rscript !{baseDir}/bin/after_genotyping_qc.r
   '''}
 process Filtering2{
   input:
   file data from TargetFilter.collect()
-  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim.pl').collect()
+  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
   file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
 
@@ -197,7 +201,7 @@ process Filtering2{
 
   ## -- 10 : AF based filter
   plink --freq --bfile target_${pop} --out target_freq_${pop}
-  perl HRC-1000G-check-bim.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r 1000GP_Phase3_combined.legend -g -p ${pop2} -x
+  perl HRC-1000G-check-bim-NoReadKey.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r 1000GP_Phase3_combined.legend -g -p ${pop2} -x
   mkdir withFreqFiltering_${pop}
   cp *1000G* Run-plink.sh withFreqFiltering_${pop}
 
@@ -219,7 +223,7 @@ process Make_SNP_Filtering{
 
   shell:
   '''
-  ## -- 12 : filtering SNP
+  ## -- 12 : Create list of SNPs to filter
   Rscript !{baseDir}/bin/afterGenotyping_SNPs_filtering.r
   '''}
 process Filtering3{
@@ -235,9 +239,10 @@ process Filtering3{
 
   shell:
   '''
-  ## -- 13 : removing SNP
+  ## -- 13 : Removing SNPs
   plink --bfile target4 --exclude filtered_snps.txt --make-bed --out target5
 
+  ## -- 14 : AF based filter
   plink --freq --bfile target5 --out target6
   perl HRC-1000G-check-bim-NoReadKey.pl -b target5.bim -f target6.frq -r 1000GP_Phase3_combined.legend -g -x -n
   bash Run-plink.sh
@@ -272,7 +277,7 @@ process QC2{
     pop2="AFR"
   fi
 
-  ## -- 9 : Figure time
+  ## -- 15 : Figure QC2
   Rscript !{baseDir}/bin/preImputation_QC_plots.r ${pop} ${pop2}
   '''}
 process Filtering4{
@@ -284,20 +289,21 @@ process Filtering4{
 
   output:
   file ('*-REFfixed.vcf.gz') into FilterFinal
+  file ('*-REFfixed.vcf.gz') into FilterFinal2
 
   shell:
   '''
   chr=!{chromosome}
 
-  #Remove ambiguous strand snps and SNPs with unknown SNPs ID
-  awk '{ if (($5=="T" && $6=="A")||($5=="A" && $6=="T")||($5=="C" && $6=="G")||($5=="G" && $6=="C")) print $2, "ambig" ; else print $2 ;}' target5-updated-chr${chr}.bim | grep -v ambig | grep -v -e --- | sort -u > NonAmbiguous{chr}.snplist.txt
-  plink --bfile target5-updated-chr${chr} --extract NonAmbiguous{chr}.snplist.txt --make-bed --out target6_chr${chr}
+  ## -- 16 : Remove ambiguous strand/unknown SNPs
+  awk '{ if (($5=="T" && $6=="A")||($5=="A" && $6=="T")||($5=="C" && $6=="G")||($5=="G" && $6=="C")) print $2, "ambig" ; else print $2 ;}' target5-updated-chr${chr}.bim | grep -v ambig | grep -v -e --- | sort -u > NonAmbiguous${chr}.snplist.txt
+  plink --bfile target5-updated-chr${chr} --extract NonAmbiguous${chr}.snplist.txt --make-bed --out target6_chr${chr}
 
-  #Create VCF / sort and zip
+  ## -- 17 : Create VCF
   plink  --bfile target6_chr${chr} --recode vcf --out target6_chr${chr}_vcf
   bcftools sort target6_chr${chr}_vcf.vcf  | bgzip -c  > chr${chr}.vcf.gz
 
-  #Check SNPs using check_VCF.py
+  ## -- 18 : Check SNPs
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check_${chr} chr${chr}.vcf.gz
   bcftools norm --check-ref ws -f human_g1k_v37.fasta chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
@@ -305,6 +311,7 @@ process Filtering4{
 process Make_Chunks{
   input:
   val chromosome from 1..22
+  file data from FilterFinal.collect()
 
   output:
   env chunks into NbChunk
@@ -312,59 +319,65 @@ process Make_Chunks{
   file ('*.txt') into ChunkSplit
 
   shell:
-  """
-  chr=$chromosome
-  Rscript $baseDir/bin/create_chunks.r \${chr}
-  chunks=\$(wc -l chunk_split_chr\${chr}.txt | awk '{print \$1}')
-  """}
-process Make_Multiprocess{
+  '''
+  ## -- 19 : Create Chunks
+  chr=!{chromosome}
+  echo $chr
+  ref_haps="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
+  bcftools index -f chr${chr}-REFfixed.vcf.gz
+  bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz ${ref_haps}1000GP_chr${chr}.bcf | bgzip -c > isec_chr_${chr}.vcf.gz
+  Rscript !{baseDir}/bin/create_chunks.r ${chr}
+  chunks=$(wc -l chunk_split_chr${chr}.txt | awk '{print $1}')
+  '''}
+process Make_Multiprocessing{
   input:
   val merge from InfoChrChunk.toList()
 
   output:
-  file 'liste.txt' into NbChr
+  file 'multiprocess.txt' into NbChr
 
   shell:
   '''
   #!/usr/bin/env python3
+  ## -- 20 : Preparation of multiprocessing for imputation
 
-  file=open('liste.txt','w')
-  a=!{merge}
-  for tuples in a:
+  file=open('multiprocess.txt','w')
+  liste=!{merge}
+  for tuples in liste:
      for i in range(0,tuples[0]):
         file.write(str(tuples[1]) + '\\n')
 
   file.close()
   '''}
 process Imputation{
-  validExitStatus 0, 255
-  publishDir params.out, mode: 'copy'
+  //validExitStatus 0, 255//255 :  WARNING: Sample 900 (1-indexed) has a het count of 0 + ERROR !!! No variants found in GWAS File : chr_15_chunk1.phased.vcf Please check the file properly.., 0 : WARNING: Sample 900 (1-indexed) has a het count of 0
+  //publishDir params.out, mode: 'copy'
 
   input:
   val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
   val chromosomes from NbChr.splitText()
 
-  file data from FilterFinal.collect()
+  file data from FilterFinal2.collect()
   file data from ChunkSplit.collect()
 
-  //output:
-  //tuple val(chromosome), env(n_chunks) into imputationFinal
+  output:
+  file '*.logimpute' into Imputation
 
   shell:
   '''
   chr=!{chromosomes}
   chunk=!{chunks}
   echo "chr: ${chr} n_chunks: ${chunk}"
-
   cpu=1
-
   ref_haps="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
   start=$(awk '{print $1}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
   end=$(awk '{print $2}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
 
+  ## -- 21 : Phasing
   bcftools index -f chr${chr}-REFfixed.vcf.gz
   eagle --vcfRef ${ref_haps}1000GP_chr${chr}.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /home/lipinskib/Eagle_v2.4.1/tables/genetic_map_hg19_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
 
+  ## -- 22 : Imputation
   ref_haps="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
   minimac4 --refHaps ${ref_haps}${chr}.1000g.Phase3.v5.With.Parameter.Estimates.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
   '''}

@@ -1,4 +1,4 @@
-#!/usr/bin/env nextflow
+#! /usr/bin/env nextflow
 
 // Copyright (C) 2017 IARC/WHO
 
@@ -50,78 +50,73 @@ if (params.help) {
 log.info "help:                               ${params.help}"
 }
 
-params.folder = '/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/'
-params.out = '/data/gep/MR_Signatures/work/Boris/protocol_min/data/'
-
+params.folder = null //your/directory/path/  ../../data/data_start
 params.dataset = null
-
-data = Channel.fromPath(params.folder+params.dataset)
 
 process liftOver_Coordinates{
   input:
-  val pattern from data
-  file chain_file from Channel.fromPath(params.folder+'hg18ToHg19.over.chain')
+
+  file data from Channel.fromPath(params.folder+params.dataset+"*").collect()
+  file data from Channel.fromPath(params.folder+'hg18ToHg19.over.chain').collect()
 
   output:
   file('dataset2*') into resultChannel
 
-  script:
-  """
-  name="$pattern"
-  awk '{print "chr" \$1, \$4 -1, \$4, \$2 }' \${name%%.*}.bim | sed 's/chr23/chrX/' | sed 's/chr24/chrY/' > dataset.tolift
+  shell:
+  '''
+  awk '{print "chr" $1, $4 -1, $4, $2 }' !{params.dataset}.bim | sed 's/chr23/chrX/' | sed 's/chr24/chrY/' > dataset.tolift
   liftOver dataset.tolift hg18ToHg19.over.chain dataset1 dataset_NCBI36.unMapped
 
-  awk '{print \$4}' dataset1 > dataset1.snps
-  plink --bfile \${name%%.*} --extract dataset1.snps --make-bed --out dataset1
+  awk '{print $4}' dataset1 > dataset1.snps
+  plink --bfile !{params.dataset} --extract dataset1.snps --make-bed --out dataset1
 
-  awk '{print \$4, \$3}' dataset1  > dataset1.pos
+  awk '{print $4, $3}' dataset1  > dataset1.pos
   plink --bfile dataset1 --update-map dataset1.pos --make-bed --out dataset2
 
-  """
+  '''
 }
 
-
 process plink_processing{
-  publishDir params.out, mode: 'copy'
+  publishDir params.folder, mode: 'copy'
 
   input:
   file data from resultChannel.collect()
-  file csv_file from Channel.fromPath(params.folder+'pone.0002551.s003.csv')
-  file data2 from Channel.fromPath(params.folder+'HRC-1000G-check-bim.pl').collect()
-  file data3 from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
+  file data from Channel.fromPath(params.folder+'pone.0002551.s003.csv').collect()
+  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
+  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
 
   output:
   file(params.dataset+"/") into resultChannel2
 
-  script:
+  shell:
   if( params.dataset == 'hapmap_r23a' )
-    """
-    awk -F',' '{print \$1}' $csv_file | grep -v SNPID > AIM_list.txt
+    '''
+    awk -F',' '{print $1}' pone.0002551.s003.csv | grep -v SNPID > AIM_list.txt
     plink --bfile dataset2 --extract AIM_list.txt --make-bed --out dataset3
 
     plink --freq --bfile dataset3 --make-bed --out dataset4
-    perl HRC-1000G-check-bim.pl -b dataset4.bim -f dataset4.frq -r 1000GP_Phase3_combined.legend -g -p ALL -x -n
+    perl HRC-1000G-check-bim-NoReadKey.pl -b dataset4.bim -f dataset4.frq -r 1000GP_Phase3_combined.legend -g -p ALL -x -n
     bash Run-plink.sh
 
-    awk '{print \$2}' dataset4-updated.fam > ref_samples.txt
+    awk '{print $2}' dataset4-updated.fam > ref_samples.txt
 
-    mkdir ${params.dataset}/
-    mv ref_samples.txt ${params.dataset}/ref_samples.txt
-    mv AIM_list.txt ${params.dataset}/AIM_list.txt
-    mv dataset4-updated.bed ${params.dataset}/${params.dataset}.bed
-    mv dataset4-updated.bim ${params.dataset}/${params.dataset}.bim
-    mv dataset4-updated.fam ${params.dataset}/${params.dataset}.fam
-    """
+    mkdir !{params.dataset}/
+    mv ref_samples.txt !{params.dataset}/ref_samples.txt
+    mv AIM_list.txt !{params.dataset}/AIM_list.txt
+    mv dataset4-updated.bed !{params.dataset}/!{params.dataset}.bed
+    mv dataset4-updated.bim !{params.dataset}/!{params.dataset}.bim
+    mv dataset4-updated.fam !{params.dataset}/!{params.dataset}.fam
+    '''
 
   else
-    """
+    '''
     plink --freq --bfile dataset2 --make-bed --out dataset3
-    perl HRC-1000G-check-bim.pl -b dataset3.bim -f dataset3.frq -r 1000GP_Phase3_combined.legend -g -p ALL -x -n
+    perl HRC-1000G-check-bim-NoReadKey.pl -b dataset3.bim -f dataset3.frq -r 1000GP_Phase3_combined.legend -g -p ALL -x -n
     bash Run-plink.sh
 
-    mkdir ${params.dataset}/
-    mv dataset3-updated.bed ${params.dataset}/${params.dataset}.bed
-    mv dataset3-updated.bim ${params.dataset}/${params.dataset}.bim
-    mv dataset3-updated.fam ${params.dataset}/${params.dataset}.fam
-    """
+    mkdir !{params.dataset}/
+    mv dataset3-updated.bed !{params.dataset}/!{params.dataset}.bed
+    mv dataset3-updated.bim !{params.dataset}/!{params.dataset}.bim
+    mv dataset3-updated.fam !{params.dataset}/!{params.dataset}.fam
+    '''
 }

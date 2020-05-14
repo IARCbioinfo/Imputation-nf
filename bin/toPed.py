@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import sys
 
-file = open('/data/gep/MR_Signatures/work/Boris/protocol_min/data/HGDP_FinalReport_Forward.txt', 'r')
+file = open(str(sys.argv[1])+'HGDP_FinalReport_Forward.txt', 'r')
 list_list = [file.readline().split()]
 for lines in file.readlines():
     line = lines.split()
@@ -10,11 +11,11 @@ for lines in file.readlines():
     list_list.append(l)
 
 matrix = np.array(list_list)
-np.savetxt('/data/gep/MR_Signatures/work/Boris/protocol_min/data/matrice.txt',matrix.T, fmt='%s')
+np.savetxt(str(sys.argv[1])+'matrice.txt',matrix.T, fmt='%s')
 file.close()
 
-mat = open('/data/gep/MR_Signatures/work/Boris/protocol_min/data/matrice.txt', 'r')
-file2 = open('/data/gep/MR_Signatures/work/Boris/protocol_min/data/HGDP.ped', 'w')
+mat = open(str(sys.argv[1])+'matrice.txt', 'r')
+file2 = open(str(sys.argv[1])+'HGDP.ped', 'w')
 
 for lines in mat.readlines():
     line = lines.strip().split()
