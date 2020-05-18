@@ -52,7 +52,7 @@ You can avoid installing all the external software by only installing Docker. Se
 ## Input
   | Type      | Description     |
   |-----------|---------------|
-  | Admixture reference/Target Plink dataset | Corresponds to the admixture reference's dataset and the dataset to be analysed, both already preprocessed by filters found in the Preparation_dataset.nf. Composed by the following files : bed, bim & fam |
+  | Plink datasets | Corresponds to the admixture reference's dataset and the target dataset to be analysed, both already preprocessed by filters found in the Preparation_dataset.nf. Composed by the following files : bed, bim & fam |
 
 
 

@@ -2,9 +2,6 @@
 library(data.table)
 library(limma)
 
-# Parameters --------------------------------------------------------------
-
-
 # Check_bim ---------------------------------------------------------------
 summary=data.frame(pop=vector(),n_exclude_SNPs=vector(),n_Chr_SNPs=vector(),n_StrandFlip_SNPs=vector(),n_Pos_SNPs=vector())
 summary_withoutFreqFilt=data.frame(pop=vector(),n_exclude_SNPs=vector(),n_Chr_SNPs=vector(),n_StrandFlip_SNPs=vector(),n_Pos_SNPs=vector())
@@ -24,13 +21,6 @@ for(pop in c("CEU","CHB_JPT","YRI")){
   for(file in non_pop_dependent_files){nrow_check_files=c(nrow_check_files,length(readLines(paste0(freq_filter,file))) )}
   names(nrow_check_files)=c("pop","n_exclude_SNPs","n_Chr_SNPs","n_StrandFlip_SNPs","n_Pos_SNPs")
   summary=rbind(summary,data.frame(t(nrow_check_files),stringsAsFactors = F))
-
-  #freq_filter="withoutFreqFiltering/"
-  #nrow_check_files=c(pop)
-  #for(file in pop_dependent_files){nrow_check_files=c(nrow_check_files,length(readLines(paste0(freq_filter,file))) )}
-  #for(file in non_pop_dependent_files){nrow_check_files=c(nrow_check_files,length(readLines(paste0(freq_filter,file))) )}
-  #names(nrow_check_files)=c("pop","n_exclude_SNPs","n_Chr_SNPs","n_StrandFlip_SNPs","n_Pos_SNPs")
-  #summary_withoutFreqFilt=rbind(summary_withoutFreqFilt,data.frame(t(nrow_check_files),stringsAsFactors = F))
 
 }
 as.numeric(summary$n_exclude_SNPs) - as.numeric(summary_withoutFreqFilt$n_exclude_SNPs)

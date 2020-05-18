@@ -133,7 +133,6 @@ process Filtering1{
   shell:
   '''
   pop=!{rspop}
-  #subpop_path=out_pop_admixture/1000G_checking_$pop/
   subpop=out_pop_admixture/1000G_checking_$pop/samples_$pop.txt
 
   ## -- 5 : Keep only the samples in the ancerstry $pop
@@ -159,7 +158,7 @@ process Filtering1{
   awk 'NR==FNR {a[$1,$2]=$5;next}($1,$2) in a{print $1,$2,$6,a[$1,$2]}' het_${pop}.txt miss_${pop}.imiss > het_${pop}.imiss.txt
   '''}
 process QC1{
-  publishDir params.out, mode: 'copy'
+  publishDir params.out+'result/QC1/', mode: 'copy'
 
   input:
   file data from QC.collect()
@@ -248,7 +247,7 @@ process Filtering3{
   bash Run-plink.sh
   '''}
 process QC2{
-  publishDir params.out, mode: 'copy'
+  publishDir params.out+'result/QC2/', mode: 'copy'
 
   input:
   file data from SNPsFilter2.collect()
@@ -281,6 +280,8 @@ process QC2{
   Rscript !{baseDir}/bin/preImputation_QC_plots.r ${pop} ${pop2}
   '''}
 process Filtering4{
+  //publishDir params.out+'result', mode: 'copy'
+
   input:
   file data from TargetChr.collect()
   file data from Channel.fromPath(params.folder+'checkVCF.py').collect()
@@ -307,6 +308,8 @@ process Filtering4{
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check_${chr} chr${chr}.vcf.gz
   bcftools norm --check-ref ws -f human_g1k_v37.fasta chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
+
+
   '''}
 process Make_Chunks{
   input:
@@ -350,8 +353,7 @@ process Make_Multiprocessing{
   file.close()
   '''}
 process Imputation{
-  //validExitStatus 0, 255//255 :  WARNING: Sample 900 (1-indexed) has a het count of 0 + ERROR !!! No variants found in GWAS File : chr_15_chunk1.phased.vcf Please check the file properly.., 0 : WARNING: Sample 900 (1-indexed) has a het count of 0
-  //publishDir params.out, mode: 'copy'
+  publishDir params.out+'result/Result_Imputation/', mode: 'copy'
 
   input:
   val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
@@ -361,7 +363,7 @@ process Imputation{
   file data from ChunkSplit.collect()
 
   output:
-  file '*.logimpute' into Imputation
+  file '*.imputed.dose.vcf.gz' into Imputation
 
   shell:
   '''

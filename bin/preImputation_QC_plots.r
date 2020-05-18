@@ -4,18 +4,13 @@ library(data.table)
 library(ggplot2)
 library(gridExtra)
 library(parallel)
-
-#cluster_path="/home/gabriela/remoteDir/"; cluster_path=""
-#plink_path=paste0(cluster_path,"/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/plink_files/Genotyping_R2/combined/")
-#project_path=paste0(cluster_path,"/data/gep/MR_Signatures/work/gabriela/GIT_Rstudio_project/")
-
+library(hexbin)
 
 pop=as.character(commandArgs(TRUE)[1]) #"CHB_JPT"  #"CEU" "YRI"
 pop_ref=as.character(commandArgs(TRUE)[2]) #"EAS" #"EUR" "AFR"
 
 af_diff=0.2
 af_fc=5
-#output_path_figures=paste0(project_path,"results/figures/imputation_QCs/")
 
 # Read in the frequency files
 chip <- fread(paste0("target_freq_",pop,".frq"), header = TRUE)
@@ -102,6 +97,6 @@ p2 = ggplot(isec[!exclude], aes(x=AF_CHIP)) +
   geom_histogram(color="black", fill="white",bins=100)+
   labs(title=paste0("AF in target data (",pop_ref," ancestry)"),x="AF in target data", y = "Count")
 
-grid.arrange(p1, p2, nrow = 1) #library(hexbin)
+grid.arrange(p1, p2, nrow = 1)
 
 dev.off()
