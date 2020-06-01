@@ -62,30 +62,48 @@ params.targetDir = params.input+params.target+'/'
 params.script = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/script/bin/'
 params.out = params.input // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/'
 
+process UpdateMap{ 
+  input:
+  file data from Channel.fromPath(params.targetDir+"*").collect()
+  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
+  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
+
+  output:
+  file ('*-updated.{bed,bim,fam}') into TargetMap
+
+  shell:
+  '''
+  ############################################################################################
+  ## -- 0 : Update map on the tergat dataset
+  plink --freq --bfile !{params.target} --out !{params.target}_frep
+  perl HRC-1000G-check-bim-NoReadKey.pl -b !{params.target}.bim -f !{params.target}_frep.frq -r 1000GP_Phase3_combined.legend -g -x -n
+  grep -v "real-ref-alleles" Run-plink.sh> Run-plink-update.sh 
+  bash Run-plink-update.sh
+  '''}
 process Admixture{
   input:
   file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
   file data from Channel.fromPath(params.refDir+"*").collect()
   file data from Channel.fromPath(params.targetDir+"*").collect()
+  file data from TargetMap.collect()
 
 
   output:
   file ('target4.{bed,bim,fam}') into Merge
   file ('target4.{bed,bim,fam}') into Merge2
   file ('out_pop_admixture/') into Admixture
+  file ('out_pop_admixture/') into Admixture2
   file ('admixture_results_withGroups.txt') into Target
-
 
   shell:
   '''
-  ############################################################################################
   ## -- 1 : Retrieve common SNPs between SNPs in the reference list and the target data.
   ## -- Ref -- ##
   awk '{print $2}' !{params.ref}.bim | sort > ref_SNPs.txt
 
   ## -- Target -- ##
-  grep -Fwf AIM_list.txt !{params.target}.bim | awk '{print $2}' > target_SNPs.txt
-  plink --bfile !{params.target} --extract target_SNPs.txt --make-bed --out target
+  grep -Fwf AIM_list.txt !{params.target}-updated.bim | awk '{print $2}' > target_SNPs.txt
+  plink --bfile !{params.target}-updated --extract target_SNPs.txt --make-bed --out target
 
   ## -- Get common SNPs -- ##
   grep -Fwf <(cat ref_SNPs.txt) <(awk '{print $2}' target.bim)  > target_common_SNPs.txt
@@ -101,7 +119,6 @@ process Admixture{
 
   awk '{print $2}' merge.fam  >  all_samples.txt
 
-
   ## -- 3 : Associate each reference sample to the correct origin + run admixure
   sort -k2 relationships_w_pops_121708.txt > relationships_w_pops_121708_2.txt
   awk '{print $2}' !{params.ref}.fam | sort -k1,1 > ref_ind.txt
@@ -109,12 +126,11 @@ process Admixture{
   Rscript !{baseDir}/bin/create_pop_file.r merge.fam ind_pop.txt merge.pop
   K=3
   admixture --cv merge.bed $K --supervised -j40 | tee log${K}.out
-  Rscript !{baseDir}/bin/process_admixture.r !{params.target} #### regarder les sorties pour chopper les id
-
+  Rscript !{baseDir}/bin/process_admixture.r !{params.target}
 
   ############################################################################################
   ## -- 4 : First filtering step
-  plink --bfile !{params.target}  --geno 0.03 --make-bed --out target3
+  plink --bfile !{params.target} --geno 0.03 --make-bed --out target3
   plink --bfile target3 --maf 0.01 --make-bed --out target4
   '''}
 process Filtering1{
@@ -138,17 +154,14 @@ process Filtering1{
   ## -- 5 : Keep only the samples in the ancerstry $pop
   plink --bfile target4 --keep ${subpop} --make-bed --out target5_${pop}
 
-
   ## -- 6 : Perform sex checking
-  #plink --bfile target5_${pop} --make-bed --merge-x --out target6_${pop}
-  plink --bfile target5_${pop} --make-bed --split-x b37 no-fail --out target_${pop}
+  plink --bfile target5_${pop} --make-bed --merge-x no-fail --out target6_${pop}
+  plink --bfile target6_${pop} --make-bed --split-x b37 no-fail --out target_${pop}
   plink --bfile target_${pop} --indep-pairwise 50 5 0.2 --out target_Independent_SNPs_${pop} # keep independent SNPs
   plink --bfile target_${pop} --extract target_Independent_SNPs_${pop}.prune.in --check-sex --out target_sexCheck_${pop}
 
-
   ## -- 7 : Test relatedness between samples
   plink --bfile target_${pop} --extract target_Independent_SNPs_${pop}.prune.in --genome --out target_rel_${pop} --min 0.185
-
 
   ## -- 8 : Test heterozygocity and missing rates
   plink --bfile target_${pop} --het --chr 1-22 --out het_${pop}
@@ -158,7 +171,7 @@ process Filtering1{
   awk 'NR==FNR {a[$1,$2]=$5;next}($1,$2) in a{print $1,$2,$6,a[$1,$2]}' het_${pop}.txt miss_${pop}.imiss > het_${pop}.imiss.txt
   '''}
 process QC1{
-  publishDir params.out+'result/QC1/', mode: 'copy'
+  publishDir params.out+'result/'+params.target+'/QC1/', mode: 'copy'
 
   input:
   file data from QC.collect()
@@ -247,7 +260,7 @@ process Filtering3{
   bash Run-plink.sh
   '''}
 process QC2{
-  publishDir params.out+'result/QC2/', mode: 'copy'
+  publishDir params.out+'result/'+params.target+'/QC2/', mode: 'copy'
 
   input:
   file data from SNPsFilter2.collect()
@@ -280,8 +293,6 @@ process QC2{
   Rscript !{baseDir}/bin/preImputation_QC_plots.r ${pop} ${pop2}
   '''}
 process Filtering4{
-  //publishDir params.out+'result', mode: 'copy'
-
   input:
   file data from TargetChr.collect()
   file data from Channel.fromPath(params.folder+'checkVCF.py').collect()
@@ -308,8 +319,6 @@ process Filtering4{
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check_${chr} chr${chr}.vcf.gz
   bcftools norm --check-ref ws -f human_g1k_v37.fasta chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
   python2 checkVCF.py -r human_g1k_v37.fasta -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
-
-
   '''}
 process Make_Chunks{
   input:
@@ -318,6 +327,7 @@ process Make_Chunks{
 
   output:
   env chunks into NbChunk
+  env chunks into NbChunk2
   tuple env(chunks), val(chromosome) into InfoChrChunk
   file ('*.txt') into ChunkSplit
 
@@ -325,7 +335,6 @@ process Make_Chunks{
   '''
   ## -- 19 : Create Chunks
   chr=!{chromosome}
-  echo $chr
   ref_haps="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
   bcftools index -f chr${chr}-REFfixed.vcf.gz
   bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz ${ref_haps}1000GP_chr${chr}.bcf | bgzip -c > isec_chr_${chr}.vcf.gz
@@ -338,6 +347,7 @@ process Make_Multiprocessing{
 
   output:
   file 'multiprocess.txt' into NbChr
+  file 'multiprocess.txt' into NbChr2
 
   shell:
   '''
@@ -353,8 +363,6 @@ process Make_Multiprocessing{
   file.close()
   '''}
 process Imputation{
-  publishDir params.out+'result/Result_Imputation/', mode: 'copy'
-
   input:
   val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
   val chromosomes from NbChr.splitText()
@@ -363,7 +371,7 @@ process Imputation{
   file data from ChunkSplit.collect()
 
   output:
-  file '*.imputed.dose.vcf.gz' into Imputation
+  file '*imputed.dose.vcf.gz*' into FileVCF
 
   shell:
   '''
@@ -382,4 +390,55 @@ process Imputation{
   ## -- 22 : Imputation
   ref_haps="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
   minimac4 --refHaps ${ref_haps}${chr}.1000g.Phase3.v5.With.Parameter.Estimates.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
+  
+  bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
+
+  '''}
+process Concatenation{
+  publishDir params.out+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
+  cpus=6
+
+  input:
+  val chromosomes from 1..22
+  file data from FileVCF.collect()
+
+  output:
+  file '*_combined.vcf.gz' into Imputation
+
+  shell:
+  '''
+  chr=!{chromosomes}
+  mkdir chr_${chr}
+  ls chr_${chr}_chunk*.imputed.dose.vcf.gz> chr_${chr}_imp_res.txt
+  bcftools concat --threads 6 -f chr_${chr}_imp_res.txt -Ou | bcftools sort --temp-dir chr_${chr} -Ou | bgzip -c > chr_${chr}_combined.vcf.gz 
+  '''}
+process postImputation_QC_sh{
+  input:
+  val population from('ALL','CEU','YRI','CHB_JPT')
+  each chromosome from 1..22
+  file data from Imputation.collect()
+  file data from Admixture2.collect()
+
+  output:
+  file '*.{txt,frq}' into PostImputation_QC_sh_result
+
+  shell:
+  '''
+  pop=!{population}
+  chr=!{chromosome}
+  bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
+  '''}
+process postImputation_QC_R{
+  publishDir params.out+'result/'+params.target+'/QC3/', mode: 'copy'
+  input:
+  val population from('ALL','CEU','YRI','CHB_JPT')
+  file data from PostImputation_QC_sh_result.collect()
+
+  output:
+  file '*v2.{txt,pdf}' into PostImputation_QC_R_result
+
+  shell:
+  '''
+  pop=!{population}
+  Rscript !{baseDir}/bin/postImputation_QC_plots.r ${pop} 0.3
   '''}
