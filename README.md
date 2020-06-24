@@ -13,9 +13,9 @@ The pipeline used to perform the imputation of several targets datasets processe
 
 Here is a summary of the method :
 - Preprocessing of target dataset if necessary : by using the nextflow script Preparation_dataset.nf which take the dataset plink file (.bed/.bim/.fam) in input.
-- First step : Origin estimation of several population from the target dataset by using admixture tools and a dataset of reference.
-- Second step : Series of quality and SNPs filters from the target dataset before the imputation step.
-- Third step : QC analyses of the target dataset
+- First step : Origin estimation of sample from the target dataset by using admixture tools and the hapmap dataset as reference.
+- Second step : Series of SNPs filters and quality checking from the target dataset before the imputation step.
+- Third step : VCF production
 - Last step : Phasing and imputation
 
 
@@ -40,13 +40,19 @@ The pipeline works under Linux distributions.
 - [Hapmap Dataset](zzz.bwh.harvard.edu/plink/dist/hapmap_r23a.zip) : as reference's dataset for admixture
 - [HGDP Dataset](http://www.hagsc.org/hgdp/data/hgdp.zip) : for the dataset's test, you have to use the toMap.py & toPed.py in the 'converstion' directory to convert files in the .map/.ped plink format. Next you have to convert this last output in the .bed/.bam/.fam plink format by using plink line command and run the imputation's pipeline.
 - Perl tool : [HRC-1000G-check-bim-NoReadKey.pl](https://www.well.ox.ac.uk/~wrayner/tools/) & [1000GP_Phase3_combined.legend](https://www.well.ox.ac.uk/~wrayner/tools/1000GP_Phase3_combined.legend.gz)
-- LiftOver tool : [hg18ToHg19.over.chain](http://hgdownload.cse.ucsc.edu/goldenpath/hg18/liftOver/hg18ToHg19.over.chain.gz)
+- LiftOver tool : [hg18ToHg19.over.chain](http://hgdownload.cse.ucsc.edu/goldenpath/hg18/liftOver/hg18ToHg19.over.chain.gz) & [hg18ToHg38.over.chain](http://hgdownload.cse.ucsc.edu/goldenpath/hg18/liftOver/hg18ToHg38.over.chain.gz)
 - Peparation dataset tool : [pone.0002551.s003.xls](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2432498/bin/pone.0002551.s003.xls) (Convert it in .csv format)
 - Admixture tool : [relationships_w_pops_121708.txt](ftp://ftp.ncbi.nlm.nih.gov/hapmap/genotypes/2009-01_phaseIII/plink_format/relationships_w_pops_121708.txt)
-- [CheckVCF](https://github.com/zhanxw/checkVCF/raw/master/checkVCF.py) & [HumanV37](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz)
+- [CheckVCF](https://github.com/zhanxw/checkVCF/raw/master/checkVCF.py), [Fasta file in V37](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz) & [Fasta file in V38](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/)
+- [1000G Reference in Hg38](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/GRCh38_positions/) with the [doc](https://data.broadinstitute.org/alkesgroup/Eagle/#x1-320005.3.2)
+
+4. Other to know : 
+- Create [legend](https://imputationserver.readthedocs.io/en/latest/create-reference-panels/#create-legend-files) & [m3vcf](https://imputationserver.readthedocs.io/en/latest/create-reference-panels/#create-m3vcf-files) file for the reference
 
 
 You can avoid installing all the external software by only installing Docker. See the [IARC-nf](https://github.com/IARCbioinfo/IARC-nf) repository for more information.
+
+
 
 
 ## Input
@@ -58,12 +64,16 @@ You can avoid installing all the external software by only installing Docker. Se
 
   Specify the test files location
 
+
+
+
+
+
 ## Parameters
 
   * #### Mandatory
 | Name      | Example value | Description     |
 |-----------|---------------|-----------------|
-| --ref | hapmap_r23a | Pattern of the admixture's reference dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset (for example : 'user/main_data/hapmap_r23a/'). |
 | --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. (for example : 'user/main_data/HGDP/')|
 |--input| user/main_data/ | The path of the main directory. WARNING : for now, you have to create a 'user/main_data/data_start' directory where we can find all the data to download before to run the script. |
 |--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline |
@@ -71,8 +81,12 @@ You can avoid installing all the external software by only installing Docker. Se
   * #### Optional
 | Name      | Default value | Description     |
 |-----------|---------------|-----------------|
-| --param3   |            xx | ...... |
-| --param4    |            xx | ...... |
+| --geno1   |          0.03 | First genotyping call rate plink threshold, apply in the full target dataset |
+| --geno2   |          0.03 | Second genotyping call rate plink threshold, apply in the target dataset divide by population |
+| --maf     |          0.01 | Minor allele frequencies plink threshold, apply in the full target dataset |
+| --pihat   |         0.185 | Minimum pi_hat value use for the relatedness test, 0.185 is halfway between the expected IBD for third- and second-degree relatives |
+| --hwe     |          1e-8 | Hardy-Weinberg Equilibrium plink p-value threshold |
+
 
   * #### Flags
 

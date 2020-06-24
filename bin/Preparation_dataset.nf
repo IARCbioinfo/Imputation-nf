@@ -57,7 +57,7 @@ process liftOver_Coordinates{
   input:
 
   file data from Channel.fromPath(params.folder+params.dataset+"*").collect()
-  file data from Channel.fromPath(params.folder+'hg18ToHg19.over.chain').collect()
+  file data from Channel.fromPath(params.folder+'hg18ToHg38.over.chain').collect()
 
   output:
   file('dataset2*') into resultChannel
@@ -65,7 +65,7 @@ process liftOver_Coordinates{
   shell:
   '''
   awk '{print "chr" $1, $4 -1, $4, $2 }' !{params.dataset}.bim | sed 's/chr23/chrX/' | sed 's/chr24/chrY/' > dataset.tolift
-  liftOver dataset.tolift hg18ToHg19.over.chain dataset1 dataset_NCBI36.unMapped
+  liftOver dataset.tolift hg18ToHg38.over.chain dataset1 dataset_NCBI36.unMapped
 
   awk '{print $4}' dataset1 > dataset1.snps
   plink --bfile !{params.dataset} --extract dataset1.snps --make-bed --out dataset1

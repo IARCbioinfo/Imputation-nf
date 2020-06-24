@@ -1,12 +1,11 @@
 #!/usr/bin/Rscript
-library(BSgenome.Hsapiens.UCSC.hg19)
+library(BSgenome.Hsapiens.UCSC.hg38)
 seqlengths(Hsapiens)
 options("scipen"=100, "digits"=4)
 chr=as.integer(commandArgs(TRUE)[1])
 print(seqlengths(Hsapiens)[chr])
 chunks=data.frame(strat=vector(),end=vector())
 positions=seq(1,seqlengths(Hsapiens)[chr],20000000) #19999999
-
 
 zz=gzfile(paste0("isec_chr_",chr,".vcf.gz"))
 chr_map=read.table(zz,header = F)
@@ -22,9 +21,7 @@ while(i<=length(positions)){
       i=i+inc
       inc=1
       chunks=rbind(chunks,data.frame(strat=start,end=end))
-    }else{
-      inc=inc+1
-    }
+    }else{inc=inc+1}
   }else if(i!=length(positions)){
     chr_map_subset=chr_map[which(chr_map$V2>positions[i] & chr_map$V2< positions[i+inc]-1),]
     dim(chr_map_subset)
@@ -34,9 +31,7 @@ while(i<=length(positions)){
       i=i+inc
       inc=1
       chunks=rbind(chunks,data.frame(strat=start,end=end))
-    }else{
-      inc=inc+1
-    }
+    }else{inc=inc+1}
   }else{
     chr_map_subset=chr_map[which(chr_map$V2>positions[i] & chr_map$V2< seqlengths(Hsapiens)[chr]),]
     dim(chr_map_subset)

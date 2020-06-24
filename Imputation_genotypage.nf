@@ -51,22 +51,30 @@ if (params.help) {
 log.info "help:                               ${params.help}"
 }
 
-params.ref = null //hapmap_r23a
-params.target = null //HGDP
+// ## -- Option :
+params.ref = "hapmap_r23a"
+params.target = null      //HGDP & TCGA
+params.geno1 = 0.03 
+params.geno2 = 0.03
+params.maf = 0.01
+params.pihat = 0.185
+params.hwe = 1e-8 
 
+// ## -- Path :
 params.input = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/'
 params.folder = params.input+'data_start/'  // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/'
 params.refDir = params.input+params.ref+'/'
 params.targetDir = params.input+params.target+'/'
-
 params.script = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/script/bin/'
-params.out = params.input // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/'
+params.out = params.input
+
 
 process UpdateMap{ 
+
   input:
   file data from Channel.fromPath(params.targetDir+"*").collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
+  file data from Channel.fromPath(params.folder+'ALL.chr_rsID_GRCh38.legend').collect()
 
   output:
   file ('*-updated.{bed,bim,fam}') into TargetMap
@@ -76,7 +84,7 @@ process UpdateMap{
   ############################################################################################
   ## -- 0 : Update map on the tergat dataset
   plink --freq --bfile !{params.target} --out !{params.target}_frep
-  perl HRC-1000G-check-bim-NoReadKey.pl -b !{params.target}.bim -f !{params.target}_frep.frq -r 1000GP_Phase3_combined.legend -g -x -n
+  perl HRC-1000G-check-bim-NoReadKey.pl -b !{params.target}.bim -f !{params.target}_frep.frq -r ALL.chr_rsID_GRCh38.legend -g -x -n
   grep -v "real-ref-alleles" Run-plink.sh> Run-plink-update.sh 
   bash Run-plink-update.sh
   '''}
@@ -102,8 +110,8 @@ process Admixture{
   awk '{print $2}' !{params.ref}.bim | sort > ref_SNPs.txt
 
   ## -- Target -- ##
-  grep -Fwf AIM_list.txt !{params.target}-updated.bim | awk '{print $2}' > target_SNPs.txt
-  plink --bfile !{params.target}-updated --extract target_SNPs.txt --make-bed --out target
+  grep -Fwf AIM_list.txt !{params.target}-updated.bim | awk '{print $2}' > target_SNPs.txt #-updated
+  plink --bfile !{params.target}-updated --extract target_SNPs.txt --make-bed --out target #-updated
 
   ## -- Get common SNPs -- ##
   grep -Fwf <(cat ref_SNPs.txt) <(awk '{print $2}' target.bim)  > target_common_SNPs.txt
@@ -130,8 +138,8 @@ process Admixture{
 
   ############################################################################################
   ## -- 4 : First filtering step
-  plink --bfile !{params.target} --geno 0.03 --make-bed --out target3
-  plink --bfile target3 --maf 0.01 --make-bed --out target4
+  plink --bfile !{params.target} --geno !{params.geno1} --make-bed --out target3
+  plink --bfile target3 --maf !{params.maf} --make-bed --out target4
   '''}
 process Filtering1{
   input:
@@ -139,12 +147,10 @@ process Filtering1{
   file data from Admixture.collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
 
-
   output:
   file ('*.{het,imiss.txt,genome,sexcheck}') into QC
   file ('target_*.bim') into Bim
   file ('target_*.{bed,bim,fam}') into TargetFilter
-
 
   shell:
   '''
@@ -161,13 +167,13 @@ process Filtering1{
   plink --bfile target_${pop} --extract target_Independent_SNPs_${pop}.prune.in --check-sex --out target_sexCheck_${pop}
 
   ## -- 7 : Test relatedness between samples
-  plink --bfile target_${pop} --extract target_Independent_SNPs_${pop}.prune.in --genome --out target_rel_${pop} --min 0.185
+  plink --bfile target_${pop} --extract target_Independent_SNPs_${pop}.prune.in  --genome --out target_rel_${pop} --min !{params.pihat}
 
   ## -- 8 : Test heterozygocity and missing rates
-  plink --bfile target_${pop} --het --chr 1-22 --out het_${pop}
+  plink --bfile target_${pop} --het --chr 1-22  --out het_${pop}
   echo "FID IID obs_HOM N_SNPs prop_HET" > het_${pop}.txt
   awk 'NR>1 {print $1,$2,$3,$5,($5-$3)/$5}' het_${pop}.het >> het_${pop}.txt
-  plink --bfile target_${pop} --missing --out miss_${pop}
+  plink --bfile target_${pop} --missing  --out miss_${pop}
   awk 'NR==FNR {a[$1,$2]=$5;next}($1,$2) in a{print $1,$2,$6,a[$1,$2]}' het_${pop}.txt miss_${pop}.imiss > het_${pop}.imiss.txt
   '''}
 process QC1{
@@ -190,7 +196,7 @@ process Filtering2{
   input:
   file data from TargetFilter.collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
+  file data from Channel.fromPath(params.folder+'ALL.chr_rsID_GRCh38.legend').collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
 
   output:
@@ -212,8 +218,8 @@ process Filtering2{
   fi
 
   ## -- 10 : AF based filter
-  plink --freq --bfile target_${pop} --out target_freq_${pop}
-  perl HRC-1000G-check-bim-NoReadKey.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r 1000GP_Phase3_combined.legend -g -p ${pop2} -x
+  plink --freq --bfile target_${pop} --output-chr chr26 --out target_freq_${pop}
+  perl HRC-1000G-check-bim-NoReadKey.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r ALL.chr_rsID_GRCh38.legend -g -p ${pop2} -x
   mkdir withFreqFiltering_${pop}
   cp *1000G* Run-plink.sh withFreqFiltering_${pop}
 
@@ -221,6 +227,8 @@ process Filtering2{
   plink --bfile target_${pop} --geno 0.03 --make-bed --out target_geno_${pop}
   plink --bfile target_geno_${pop} --hwe 1e-8 --make-bed --out target_hwe_${pop}
   '''}
+
+
 process Make_SNP_Filtering{
   publishDir params.out, mode: 'copy'
   input:
@@ -242,7 +250,7 @@ process Filtering3{
   input:
   file data from Merge2.collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
+  file data from Channel.fromPath(params.folder+'ALL.chr_rsID_GRCh38.legend').collect()
   file data from SNPsFilter.collect()
 
   output:
@@ -252,13 +260,14 @@ process Filtering3{
   shell:
   '''
   ## -- 13 : Removing SNPs
-  plink --bfile target4 --exclude filtered_snps.txt --make-bed --out target5
+  plink --bfile target4 --exclude filtered_snps.txt  --make-bed --out target5
 
-  ## -- 14 : AF based filter
-  plink --freq --bfile target5 --out target6
-  perl HRC-1000G-check-bim-NoReadKey.pl -b target5.bim -f target6.frq -r 1000GP_Phase3_combined.legend -g -x -n
+  ## -- 14 : filter
+  plink --freq --bfile target5  --out target6
+  perl HRC-1000G-check-bim-NoReadKey.pl -b target5.bim -f target6.frq -r ALL.chr_rsID_GRCh38.legend -g -x -n
   bash Run-plink.sh
   '''}
+
 process QC2{
   publishDir params.out+'result/'+params.target+'/QC2/', mode: 'copy'
 
@@ -268,15 +277,15 @@ process QC2{
   file data from FreqResultId.collect()
   file data from TargetID.collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
-  file data from Channel.fromPath(params.folder+'1000GP_Phase3_combined.legend').collect()
+  file data from Channel.fromPath(params.folder+'ALL.chr_rsID_GRCh38.legend').collect()
 
   output:
   file ('*.pdf') into FigureQC2
 
   shell:
   '''
-  head -n1 1000GP_Phase3_combined.legend >> ref_freq_withHeader.txt
-  grep -Fwf <(awk '{print $2}' ID-target5-1000G.txt) <(cat 1000GP_Phase3_combined.legend) > ref_freq.txt
+  head -n1 ALL.chr_rsID_GRCh38.legend >> ref_freq_withHeader.txt
+  grep -Fwf <(awk '{print $2}' ID-target5-1000G.txt) <(cat ALL.chr_rsID_GRCh38.legend) > ref_freq.txt
   cat ref_freq.txt >> ref_freq_withHeader.txt
 
   pop=!{rspop}
@@ -296,8 +305,8 @@ process Filtering4{
   input:
   file data from TargetChr.collect()
   file data from Channel.fromPath(params.folder+'checkVCF.py').collect()
-  file data from Channel.fromPath(params.folder+'human_g1k_v37.fasta').collect()
-  val chromosome from 1..23
+  file data from Channel.fromPath(params.folder+'GRCh38_full_analysis_set_plus_decoy_hla.fa*').collect() //#human_g1k_v37.fasta
+  val chromosome from 1..22 //23
 
   output:
   file ('*-REFfixed.vcf.gz') into FilterFinal
@@ -309,17 +318,19 @@ process Filtering4{
 
   ## -- 16 : Remove ambiguous strand/unknown SNPs
   awk '{ if (($5=="T" && $6=="A")||($5=="A" && $6=="T")||($5=="C" && $6=="G")||($5=="G" && $6=="C")) print $2, "ambig" ; else print $2 ;}' target5-updated-chr${chr}.bim | grep -v ambig | grep -v -e --- | sort -u > NonAmbiguous${chr}.snplist.txt
-  plink --bfile target5-updated-chr${chr} --extract NonAmbiguous${chr}.snplist.txt --make-bed --out target6_chr${chr}
+  plink --bfile target5-updated-chr${chr} --extract NonAmbiguous${chr}.snplist.txt --output-chr chr26 --make-bed --out target6_chr${chr}
 
   ## -- 17 : Create VCF
-  plink  --bfile target6_chr${chr} --recode vcf --out target6_chr${chr}_vcf
-  bcftools sort target6_chr${chr}_vcf.vcf  | bgzip -c  > chr${chr}.vcf.gz
+  plink  --bfile target6_chr${chr}  --output-chr chr26 --recode vcf --out target6_chr${chr}_vcf
+  bcftools sort target6_chr${chr}_vcf.vcf | bgzip -c  > chr${chr}.vcf.gz
 
   ## -- 18 : Check SNPs
-  python2 checkVCF.py -r human_g1k_v37.fasta -o after_check_${chr} chr${chr}.vcf.gz
-  bcftools norm --check-ref ws -f human_g1k_v37.fasta chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
-  python2 checkVCF.py -r human_g1k_v37.fasta -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
+  python2 checkVCF.py -r GRCh38_full_analysis_set_plus_decoy_hla.fa -o after_check_${chr} chr${chr}.vcf.gz #human_g1k_v37.fasta
+  bcftools norm --check-ref ws -f GRCh38_full_analysis_set_plus_decoy_hla.fa chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz #human_g1k_v37.fasta
+  python2 checkVCF.py -r GRCh38_full_analysis_set_plus_decoy_hla.fa -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz #human_g1k_v37.fasta
   '''}
+
+
 process Make_Chunks{
   input:
   val chromosome from 1..22
@@ -335,9 +346,9 @@ process Make_Chunks{
   '''
   ## -- 19 : Create Chunks
   chr=!{chromosome}
-  ref_haps="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
+  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/ref/vcf/"   #"/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
   bcftools index -f chr${chr}-REFfixed.vcf.gz
-  bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz ${ref_haps}1000GP_chr${chr}.bcf | bgzip -c > isec_chr_${chr}.vcf.gz
+  bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz ${ref_haps}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf| bgzip -c > isec_chr_${chr}.vcf.gz #1000GP_chr${chr}.bcf 
   Rscript !{baseDir}/bin/create_chunks.r ${chr}
   chunks=$(wc -l chunk_split_chr${chr}.txt | awk '{print $1}')
   '''}
@@ -379,20 +390,21 @@ process Imputation{
   chunk=!{chunks}
   echo "chr: ${chr} n_chunks: ${chunk}"
   cpu=1
-  ref_haps="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
+  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/ref/vcf/" #"/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
   start=$(awk '{print $1}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
   end=$(awk '{print $2}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
 
   ## -- 21 : Phasing
   bcftools index -f chr${chr}-REFfixed.vcf.gz
-  eagle --vcfRef ${ref_haps}1000GP_chr${chr}.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /home/lipinskib/Eagle_v2.4.1/tables/genetic_map_hg19_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
+  eagle --vcfRef ${ref_haps}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /home/lipinskib/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
+
+  sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
 
   ## -- 22 : Imputation
-  ref_haps="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
-  minimac4 --refHaps ${ref_haps}${chr}.1000g.Phase3.v5.With.Parameter.Estimates.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
-  
-  bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
+  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/ref/m3vcf/"    #="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
+  minimac4 --refHaps ${ref_haps}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
 
+  bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
   '''}
 process Concatenation{
   publishDir params.out+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
@@ -410,9 +422,10 @@ process Concatenation{
   chr=!{chromosomes}
   mkdir chr_${chr}
   ls chr_${chr}_chunk*.imputed.dose.vcf.gz> chr_${chr}_imp_res.txt
+  ## -- 23 : Concatenation
   bcftools concat --threads 6 -f chr_${chr}_imp_res.txt -Ou | bcftools sort --temp-dir chr_${chr} -Ou | bgzip -c > chr_${chr}_combined.vcf.gz 
   '''}
-process postImputation_QC_sh{
+process QC3_sh{
   input:
   val population from('ALL','CEU','YRI','CHB_JPT')
   each chromosome from 1..22
@@ -426,9 +439,10 @@ process postImputation_QC_sh{
   '''
   pop=!{population}
   chr=!{chromosome}
+  ## -- 24 : QC3
   bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
   '''}
-process postImputation_QC_R{
+process QC3_R{
   publishDir params.out+'result/'+params.target+'/QC3/', mode: 'copy'
   input:
   val population from('ALL','CEU','YRI','CHB_JPT')
@@ -442,3 +456,6 @@ process postImputation_QC_R{
   pop=!{population}
   Rscript !{baseDir}/bin/postImputation_QC_plots.r ${pop} 0.3
   '''}
+
+
+

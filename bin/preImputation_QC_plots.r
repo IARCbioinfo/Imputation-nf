@@ -9,6 +9,10 @@ library(hexbin)
 pop=as.character(commandArgs(TRUE)[1]) #"CHB_JPT"  #"CEU" "YRI"
 pop_ref=as.character(commandArgs(TRUE)[2]) #"EAS" #"EUR" "AFR"
 
+pop="CHB_JPT"  #"CEU" "YRI"
+pop_ref="EAS" #"EUR" "AFR"
+
+
 af_diff=0.2
 af_fc=5
 
@@ -57,11 +61,20 @@ custom_f=function(a1,a2){
 chip_updated[, strand_pb := mcmapply(custom_f,A1,A2,mc.cores=5L)]
 chip_updated=chip_updated[!which(strand_pb),]
 
+for (i in 1:length(chip_updated$ref_IDs)){
+  if(is.na(chip_updated$ref_IDs[i])){
+    chip_updated$ref_IDs[i]<-paste0(chip_updated$SNP,':',chip_updated$CHR,':',chip_updated$A1,':',chip_updated$A2)
+  }
+}
+  
+
 # Flip MAF ref don't match the ref of the reference
 custom_f=function(id,a1,a1_flip,maf){
   ref=unlist(strsplit(id,":"))[4]
-  if(a1!=ref & a1_flip!=ref ){return(1-maf)
-  }else{return(maf)}
+  if(a1!=ref & a1_flip!=ref){
+    return(1-maf)
+  }else{
+    return(maf)}
 }
 chip_updated[, flip_MAF := mcmapply(custom_f,ref_IDs,A1,A1_flip,MAF,mc.cores=2L)]
 
