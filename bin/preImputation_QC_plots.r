@@ -9,8 +9,8 @@ library(hexbin)
 pop=as.character(commandArgs(TRUE)[1]) #"CHB_JPT"  #"CEU" "YRI"
 pop_ref=as.character(commandArgs(TRUE)[2]) #"EAS" #"EUR" "AFR"
 
-pop="CHB_JPT"  #"CEU" "YRI"
-pop_ref="EAS" #"EUR" "AFR"
+#pop="CEU" #"YRI"
+#pop_ref="EUR" #"AFR"
 
 
 af_diff=0.2
@@ -35,13 +35,13 @@ filtered_SNPs=read.table("filtered_snps.txt",header = F)
 chip=chip[-which(chip$SNP %in% filtered_SNPs$V1 ),]
 
 # Read affy annotation to retrieve SNPs positions and   -------------------
-probes_IDs=fread(paste0("ID-target_",pop,"-1000G.txt"),header = F) #ancestry_run_04022020/ID-all_cohorts_freq-1000G.txt = ID-target5-1000G.txt
-head(probes_IDs)
-colnames(probes_IDs)=c("affy_IDs","ref_IDs")
+#probes_IDs=fread(paste0("ID-target_",pop,"-1000G.txt"),header = F) #ancestry_run_04022020/ID-all_cohorts_freq-1000G.txt = ID-target5-1000G.txt
+#head(probes_IDs)
+#colnames(probes_IDs)=c("affy_IDs","ref_IDs")
 
 flip_als=c("A","T","C","G")
 names(flip_als)=c("T","A","G","C")
-chip_updated=merge(chip,probes_IDs,by.x="SNP",by.y="affy_IDs",all.x=T)
+chip_updated=chip#merge(chip,probes_IDs,by.x="SNP",by.y="affy_IDs",all.x=T)
 chip_updated[A1 == "A", A1_flip := "T"]
 chip_updated[A1 == "T", A1_flip := "A"]
 chip_updated[A1 == "G", A1_flip := "C"]
@@ -61,25 +61,24 @@ custom_f=function(a1,a2){
 chip_updated[, strand_pb := mcmapply(custom_f,A1,A2,mc.cores=5L)]
 chip_updated=chip_updated[!which(strand_pb),]
 
-for (i in 1:length(chip_updated$ref_IDs)){
-  if(is.na(chip_updated$ref_IDs[i])){
-    chip_updated$ref_IDs[i]<-paste0(chip_updated$SNP,':',chip_updated$CHR,':',chip_updated$A1,':',chip_updated$A2)
-  }
-}
-  
 
 # Flip MAF ref don't match the ref of the reference
-custom_f=function(id,a1,a1_flip,maf){
+custom_f=function(id,a1,a2,a1_flip,maf){
+  if(is.na(unlist(strsplit(id,":"))[4])){
+    id=paste0(id,":NA:",a2,":",a1)
+    ref=unlist(strsplit(id,":"))[4]
+  }else{
   ref=unlist(strsplit(id,":"))[4]
+  }
   if(a1!=ref & a1_flip!=ref){
     return(1-maf)
   }else{
     return(maf)}
 }
-chip_updated[, flip_MAF := mcmapply(custom_f,ref_IDs,A1,A1_flip,MAF,mc.cores=2L)]
+chip_updated[, flip_MAF := mcmapply(custom_f,SNP,A1,A2,A1_flip,MAF,mc.cores=2L)]
 
 # Take an intersection of the panel and chip data
-isec <- merge(chip_updated[,.SD,.SDcols=c(7,11)], panel[,.SD,.SDcols=c("id",pop_ref)], by.x="ref_IDs",by.y="id",all.x=T)
+isec <- merge(chip_updated[,.SD,.SDcols=c(2,10)], panel[,.SD,.SDcols=c("id",pop_ref)], by.x="SNP",by.y="id",all.x=T)
 colnames(isec)
 colnames(isec)[c(3,2)] <- c("AF_PANEL", "AF_CHIP")
 

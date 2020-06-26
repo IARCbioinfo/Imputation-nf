@@ -68,13 +68,13 @@ params.targetDir = params.input+params.target+'/'
 params.script = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/script/bin/'
 params.out = params.input
 
-
+/*
 process UpdateMap{ 
 
   input:
   file data from Channel.fromPath(params.targetDir+"*").collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  file data from Channel.fromPath(params.folder+'ALL.chr_rsID_GRCh38.legend').collect()
+  file data from Channel.fromPath(params.folder+'ALL.chr_test.legend').collect()
 
   output:
   file ('*-updated.{bed,bim,fam}') into TargetMap
@@ -84,16 +84,16 @@ process UpdateMap{
   ############################################################################################
   ## -- 0 : Update map on the tergat dataset
   plink --freq --bfile !{params.target} --out !{params.target}_frep
-  perl HRC-1000G-check-bim-NoReadKey.pl -b !{params.target}.bim -f !{params.target}_frep.frq -r ALL.chr_rsID_GRCh38.legend -g -x -n
+  perl HRC-1000G-check-bim-NoReadKey.pl -b !{params.target}.bim -f !{params.target}_frep.frq -r ALL.chr_test.legend -g -x -n
   grep -v "real-ref-alleles" Run-plink.sh> Run-plink-update.sh 
   bash Run-plink-update.sh
-  '''}
+  '''}*/
 process Admixture{
   input:
   file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
   file data from Channel.fromPath(params.refDir+"*").collect()
   file data from Channel.fromPath(params.targetDir+"*").collect()
-  file data from TargetMap.collect()
+  //file data from TargetMap.collect()
 
 
   output:
@@ -110,8 +110,8 @@ process Admixture{
   awk '{print $2}' !{params.ref}.bim | sort > ref_SNPs.txt
 
   ## -- Target -- ##
-  grep -Fwf AIM_list.txt !{params.target}-updated.bim | awk '{print $2}' > target_SNPs.txt #-updated
-  plink --bfile !{params.target}-updated --extract target_SNPs.txt --make-bed --out target #-updated
+  grep -Fwf AIM_list.txt !{params.target}.bim | awk '{print $2}' > target_SNPs.txt #-updated
+  plink --bfile !{params.target} --extract target_SNPs.txt --make-bed --out target #-updated
 
   ## -- Get common SNPs -- ##
   grep -Fwf <(cat ref_SNPs.txt) <(awk '{print $2}' target.bim)  > target_common_SNPs.txt
@@ -177,7 +177,7 @@ process Filtering1{
   awk 'NR==FNR {a[$1,$2]=$5;next}($1,$2) in a{print $1,$2,$6,a[$1,$2]}' het_${pop}.txt miss_${pop}.imiss > het_${pop}.imiss.txt
   '''}
 process QC1{
-  publishDir params.out+'result/'+params.target+'/QC1/', mode: 'copy'
+  publishDir params.out+'../result/'+params.target+'/QC1/', mode: 'copy'
 
   input:
   file data from QC.collect()
@@ -196,7 +196,7 @@ process Filtering2{
   input:
   file data from TargetFilter.collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  file data from Channel.fromPath(params.folder+'ALL.chr_rsID_GRCh38.legend').collect()
+  file data from Channel.fromPath(params.folder+'ALL.chr_test.legend').collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
 
   output:
@@ -219,7 +219,7 @@ process Filtering2{
 
   ## -- 10 : AF based filter
   plink --freq --bfile target_${pop} --output-chr chr26 --out target_freq_${pop}
-  perl HRC-1000G-check-bim-NoReadKey.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r ALL.chr_rsID_GRCh38.legend -g -p ${pop2} -x
+  perl HRC-1000G-check-bim-NoReadKey.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r ALL.chr_test.legend -g -p ${pop2} -x
   mkdir withFreqFiltering_${pop}
   cp *1000G* Run-plink.sh withFreqFiltering_${pop}
 
@@ -230,7 +230,7 @@ process Filtering2{
 
 
 process Make_SNP_Filtering{
-  publishDir params.out, mode: 'copy'
+  publishDir params.out+'../result/'+params.target+'/SNP_filtering/', mode: 'copy'
   input:
   file data from DirFiltering.collect()
   file data from HWresult.collect()
@@ -250,12 +250,12 @@ process Filtering3{
   input:
   file data from Merge2.collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  file data from Channel.fromPath(params.folder+'ALL.chr_rsID_GRCh38.legend').collect()
+  file data from Channel.fromPath(params.folder+'ALL.chr_test.legend').collect()
   file data from SNPsFilter.collect()
 
   output:
   file ('target5-updated-chr*') into TargetChr
-  file ('ID-target5-1000G.txt') into TargetID
+  //file ('ID-target5-1000G.txt') into TargetID
 
   shell:
   '''
@@ -264,28 +264,29 @@ process Filtering3{
 
   ## -- 14 : filter
   plink --freq --bfile target5  --out target6
-  perl HRC-1000G-check-bim-NoReadKey.pl -b target5.bim -f target6.frq -r ALL.chr_rsID_GRCh38.legend -g -x -n
+  perl HRC-1000G-check-bim-NoReadKey.pl -b target5.bim -f target6.frq -r ALL.chr_test.legend -g -x -n
   bash Run-plink.sh
   '''}
 
 process QC2{
-  publishDir params.out+'result/'+params.target+'/QC2/', mode: 'copy'
+  publishDir params.out+'../result/'+params.target+'/QC2/', mode: 'copy'
 
   input:
   file data from SNPsFilter2.collect()
   file data from FreqResult.collect()
   file data from FreqResultId.collect()
-  file data from TargetID.collect()
+  //file data from TargetID.collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
-  file data from Channel.fromPath(params.folder+'ALL.chr_rsID_GRCh38.legend').collect()
+  file data from Channel.fromPath(params.folder+'ALL.chr_test.legend').collect()
+  file data from Channel.fromPath(params.targetDir+"*.bim").collect()
 
   output:
   file ('*.pdf') into FigureQC2
 
   shell:
   '''
-  head -n1 ALL.chr_rsID_GRCh38.legend >> ref_freq_withHeader.txt
-  grep -Fwf <(awk '{print $2}' ID-target5-1000G.txt) <(cat ALL.chr_rsID_GRCh38.legend) > ref_freq.txt
+  head -n1 ALL.chr_test.legend >> ref_freq_withHeader.txt
+  grep -Fwf <(awk '{print $2}' !{params.target}.bim) <(cat ALL.chr_test.legend) > ref_freq.txt
   cat ref_freq.txt >> ref_freq_withHeader.txt
 
   pop=!{rspop}
@@ -407,7 +408,7 @@ process Imputation{
   bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
   '''}
 process Concatenation{
-  publishDir params.out+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
+  publishDir params.out+'../result/'+params.target+'/Result_Imputation/', mode: 'copy'
   cpus=6
 
   input:
@@ -443,7 +444,7 @@ process QC3_sh{
   bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
   '''}
 process QC3_R{
-  publishDir params.out+'result/'+params.target+'/QC3/', mode: 'copy'
+  publishDir params.out+'../result/'+params.target+'/QC3/', mode: 'copy'
   input:
   val population from('ALL','CEU','YRI','CHB_JPT')
   file data from PostImputation_QC_sh_result.collect()
