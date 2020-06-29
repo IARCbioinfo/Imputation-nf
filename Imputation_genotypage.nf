@@ -36,7 +36,7 @@ if (params.help) {
     log.info "nextflow run iarcbioinfo/template-nf [-with-docker] [OPTIONS]"
     log.info ""
     log.info "Mandatory arguments:"
-    log.info "--ref                      pattern                      pattern of the reference dataset which do the link with the file .bed/.bim./fam for plink"
+    log.info ""
     log.info "--target                      pattern                      pattern of the target dataset which do the link with the file .bed/.bim./fam for plink"
     log.info ""
     log.info "Optional arguments:"
@@ -224,8 +224,8 @@ process Filtering2{
   cp *1000G* Run-plink.sh withFreqFiltering_${pop}
 
   ## -- 11 :  HWE filtering
-  plink --bfile target_${pop} --geno 0.03 --make-bed --out target_geno_${pop}
-  plink --bfile target_geno_${pop} --hwe 1e-8 --make-bed --out target_hwe_${pop}
+  plink --bfile target_${pop} --geno !{params.geno2} --make-bed --out target_geno_${pop}
+  plink --bfile target_geno_${pop} --hwe !{params.hwe} --make-bed --out target_hwe_${pop}
   '''}
 
 
