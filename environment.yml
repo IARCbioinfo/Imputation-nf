@@ -1,4 +1,4 @@
-name: Imputation_genotypage
+name: Imputation-nf
 channels:
   - conda-forge
   - bioconda
