@@ -123,7 +123,7 @@ process Admixture{
   plink --bfile !{params.ref} --extract ref_common_SNPs.txt --make-bed --out ref1
   plink --bfile target --extract target_common_SNPs.txt --make-bed --out target1
   plink --bfile target1 --update-map change_ID.txt --update-name --make-bed --out target2
-  plink --bfile target2 --bmerge ref1 --make-bed --out merge
+  plink --bfile target2 --bmerge ref1 --allow-no-sex --make-bed --out merge
 
   awk '{print $2}' merge.fam  >  all_samples.txt
 

@@ -1,6 +1,11 @@
-name: template-nf
+name: Imputation_genotypage
 channels:
   - conda-forge
   - bioconda
+  - defaults
 dependencies:
-  - samtools=1.8
+  - ucsc-liftover
+  - plink=1.90b6.12
+  - admixture=1.3.0
+  - perl=5.26.2
+  - bcftools=1.9

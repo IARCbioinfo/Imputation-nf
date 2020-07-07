@@ -5,6 +5,7 @@ admixture_Q=read.table(paste0("merge.",K,".Q"),header = F)
 n_groups=ncol(admixture_Q)
 
 target_name = as.character(commandArgs(TRUE)[1])
+target_name='NA'
 ref_samples=read.table("ref_samples.txt",stringsAsFactors=F,header=F)
 
 infered_ancestry_samples=read.table("merge.fam",stringsAsFactors=F,header=F)
@@ -31,7 +32,7 @@ for(i in 1:K){
   list_origins[[i]]=unique(ref_res$population[which(ref_res$group_admixture==i)])
 }
 
-target_res=admixture_Q[grep(target_name ,admixture_Q$samples_ids),]
+target_res=admixture_Q[which(grepl(target_name ,admixture_Q$samples_ids)==FALSE),]
 group_summary=table(target_res$group_admixture)
 table(target_res$group_admixture)
 table(target_res$group_admixture[target_res$certainty])
