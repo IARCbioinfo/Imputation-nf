@@ -62,7 +62,7 @@ params.hwe = 1e-8
 
 // ## -- Path :
 params.input = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/'
-params.folder = params.input+'data_start/'  // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/'
+params.folder = params.input+'files/'  // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/'
 params.refDir = params.input+params.ref+'/'
 params.targetDir = params.input+params.target+'/'
 params.script = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/script/bin/'
@@ -347,7 +347,7 @@ process Make_Chunks{
   '''
   ## -- 19 : Create Chunks
   chr=!{chromosome}
-  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/ref/vcf/"   #"/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
+  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/vcf/"   #"/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
   bcftools index -f chr${chr}-REFfixed.vcf.gz
   bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz ${ref_haps}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf| bgzip -c > isec_chr_${chr}.vcf.gz #1000GP_chr${chr}.bcf 
   Rscript !{baseDir}/bin/create_chunks.r ${chr}
@@ -391,7 +391,7 @@ process Imputation{
   chunk=!{chunks}
   echo "chr: ${chr} n_chunks: ${chunk}"
   cpu=1
-  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/ref/vcf/" #"/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
+  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/vcf/" #"/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
   start=$(awk '{print $1}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
   end=$(awk '{print $2}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
 
@@ -402,7 +402,7 @@ process Imputation{
   sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
 
   ## -- 22 : Imputation
-  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/data_start/ref/m3vcf/"    #="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
+  ref_haps="/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/m3vcf/"    #="/data/references/Homo_sapiens/ref_haps_1000G_phase3/hg19/m3vcf/"
   minimac4 --refHaps ${ref_haps}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
 
   bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
