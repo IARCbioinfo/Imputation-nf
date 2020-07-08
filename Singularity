@@ -1,4 +1,4 @@
-From:iarcbioinfo/Imputation-nf:v1.0
+From:iarcbioinfo/imputation-nf:v1.0
 Bootstrap:docker
 
 %labels

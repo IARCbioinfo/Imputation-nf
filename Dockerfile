@@ -23,6 +23,7 @@ RUN git clone https://github.com/statgen/Minimac4.git ; cd Minimac4 ; bash insta
 
 RUN wget https://data.broadinstitute.org/alkesgroup/Eagle/downloads/Eagle_v2.4.1.tar.gz
 RUN tar xvzf Eagle_v2.4.1.tar.gz
+RUN rm Eagle_v2.4.1.tar.gz
 
 ENV PATH /opt/conda/envs/Imputation-nf/bin:$PATH
 ENV PATH="$PATH:/Eagle_v2.4.1"
