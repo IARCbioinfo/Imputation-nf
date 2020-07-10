@@ -1,0 +1,7 @@
+From:iarcbioinfo/imputation-nf:latest
+Bootstrap:docker
+
+%labels
+    MAINTAINER **Lipinski-B** <**lipinskib@students.iarc.fr**>
+    DESCRIPTION Container image containing all requirements for pipeline Imputation-nf
+    VERSION Latest
