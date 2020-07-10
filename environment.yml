@@ -4,9 +4,10 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - ucsc-liftover
+  - ucsc-liftover=377
+  - r-ggplot2=3.3.2
   - plink=1.90b6.12
   - admixture=1.3.0
   - perl=5.26.2
   - bcftools=1.9
-  - r-ggplot2=3.3.2
+
