@@ -17,3 +17,4 @@ dependencies:
   - r-doParallel=1.0.15
   - r-ggplotify=0.0.5
   - r-hexbin=1.28.1
+  - r-data.table=1.12.8
