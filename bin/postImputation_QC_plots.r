@@ -31,7 +31,7 @@ registerDoParallel(cl)
 
 par_res <-  foreach(chr=c(1:22),.packages = c("data.table","ggplot2","gridExtra","viridis","ggplotify")) %dopar%{ 
   panel.frq=paste0("1000GP_chr",chr,"_imputation_all.frq")
-  infile=paste0("INFO_group_chr",chr,pop,".txt")
+  infile=paste0("INFO_group_chr",chr,"_",pop,".txt")
   
   panel <- fread(panel.frq, header = TRUE)
   imp_vars <- fread((infile), header = TRUE)
