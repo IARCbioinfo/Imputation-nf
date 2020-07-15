@@ -437,6 +437,7 @@ process QC3_sh{
   each chromosome from 1..22
   file data from Imputation.collect()
   file data from Admixture2.collect()
+  file data from Channel.fromPath("/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/vcf/*.bcf*").collect()
 
   output:
   file '*.{txt,frq}' into PostImputation_QC_sh_result
