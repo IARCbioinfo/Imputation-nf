@@ -30,17 +30,25 @@ log.info ""
 
 if (params.help) {
     log.info "--------------------------------------------------------"
-    log.info "  USAGE : nextflow run Imputation_genotypage.nf --ref hapmap_r23a --target HGDP /// nextflow run ../../Imputation-nf/Imputation_genotypage.nf --ref hapmap_r23a --target HGDP --input /data/gep/MR_Signatures/work/Boris/protocol_min/data/ --script ../../Imputation-nf/bin/ "
+    log.info "  USAGE : nextflow run IARCbioinfo/Imputation-nf -r v1.0 -profile singularity --target TCGA --input ../data/ "
     log.info "--------------------------------------------------------"
     log.info ""
-    log.info "nextflow run iarcbioinfo/template-nf [-with-docker] [OPTIONS]"
+    log.info "nextflow run IARCbioinfo/Imputation-nf [-r vX.X -profile singularity] [OPTIONS]"
     log.info ""
     log.info "Mandatory arguments:"
     log.info ""
-    log.info "--target                      pattern                      pattern of the target dataset which do the link with the file .bed/.bim./fam for plink"
+    log.info "--target                      pattern                      pattern of the target dataset which do the link with the plink files (.bed/.bim./fam)"
     log.info ""
     log.info "Optional arguments:"
     log.info "--<OPTION>                      <TYPE>                      <DESCRIPTION>"
+    log.info "--input                      string                      repository where you can find your data to run the pipeline"
+    log.info "--script                      string                      repository where you can find the auxiliary scripts of the pipeline"
+    log.info "--out                      string                      repository where you want to put the results of the pipeline"
+    log.info "--geno1                      float                       value for the first genotyping call rate plink option"
+    log.info "--geno2                      float                      value for the second genotyping call rate plink option"
+    log.info "--maf                      float                      Minor Allele Frequencie thresold for the data filtering step"
+    log.info "--pihat                      float                      PI_HAT thresold for the data filtering step"
+    log.info "--hwe                      float                      Hardy-Weinberg Equilibrium thresold for the data filtering step"
     log.info ""
     log.info "Flags:"
     log.info "--<FLAG>                                                    <DESCRIPTION>"
@@ -52,8 +60,8 @@ log.info "help:                               ${params.help}"
 }
 
 // ## -- Option :
-params.ref = "hapmap_r23a"
 params.target = null      //HGDP & TCGA
+params.origin = "hapmap_r23a"
 params.geno1 = 0.03 
 params.geno2 = 0.03
 params.maf = 0.01
@@ -61,16 +69,20 @@ params.pihat = 0.185
 params.hwe = 1e-8 
 
 // ## -- Path :
-params.input = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/'
-params.folder = params.input+'files/'  // '/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/'
-params.refDir = params.input+params.ref+'/'
+params.input = '.'
+params.ref="/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/"
+params.VCFref = params.ref+"vcf/*"
+params.BCFref = params.ref+"vcf/*.bcf*"
+params.M3VCFref = params.ref+"m3vcf/*"
+params.folder = params.input+'files/'
+params.originDir = params.input+params.origin+'/'
 params.targetDir = params.input+params.target+'/'
-params.script = null // '/data/gep/MR_Signatures/work/Boris/protocol_min/script/bin/'
+params.script = 'IARCbioinfo/Imputation-nf/bin/' 
 params.out = params.input
+
 
 /*
 process UpdateMap{ 
-
   input:
   file data from Channel.fromPath(params.targetDir+"*").collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
@@ -91,10 +103,8 @@ process UpdateMap{
 process Admixture{
   input:
   file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
-  file data from Channel.fromPath(params.refDir+"*").collect()
+  file data from Channel.fromPath(params.originDir+"*").collect()
   file data from Channel.fromPath(params.targetDir+"*").collect()
-  //file data from TargetMap.collect()
-
 
   output:
   file ('target4.{bed,bim,fam}') into Merge
@@ -107,7 +117,7 @@ process Admixture{
   '''
   ## -- 1 : Retrieve common SNPs between SNPs in the reference list and the target data.
   ## -- Ref -- ##
-  awk '{print $2}' !{params.ref}.bim | sort > ref_SNPs.txt
+  awk '{print $2}' !{params.origin}.bim | sort > ref_SNPs.txt
 
   ## -- Target -- ##
   grep -Fwf AIM_list.txt !{params.target}.bim | awk '{print $2}' > target_SNPs.txt #-updated
@@ -120,7 +130,7 @@ process Admixture{
 
 
   ## -- 2 : Extract the genotypes associated to these common SNPs + merge of the dataset
-  plink --bfile !{params.ref} --extract ref_common_SNPs.txt --make-bed --out ref1
+  plink --bfile !{params.origin} --extract ref_common_SNPs.txt --make-bed --out ref1
   plink --bfile target --extract target_common_SNPs.txt --make-bed --out target1
   plink --bfile target1 --update-map change_ID.txt --update-name --make-bed --out target2
   plink --bfile target2 --bmerge ref1 --allow-no-sex --make-bed --out merge
@@ -129,7 +139,7 @@ process Admixture{
 
   ## -- 3 : Associate each reference sample to the correct origin + run admixure
   sort -k2 relationships_w_pops_121708.txt > relationships_w_pops_121708_2.txt
-  awk '{print $2}' !{params.ref}.fam | sort -k1,1 > ref_ind.txt
+  awk '{print $2}' !{params.origin}.fam | sort -k1,1 > ref_ind.txt
   join -11 -22 ref_ind.txt relationships_w_pops_121708_2.txt | awk '{print $1, $7}' | awk '{if( $2 == "CEU") print $0,1,1; else { if($2 == "YRI") print $0,2,1; else {print $0,3,1}}}' > ind_pop.txt
   Rscript !{baseDir}/bin/create_pop_file.r merge.fam ind_pop.txt merge.pop
   K=3
@@ -255,7 +265,6 @@ process Filtering3{
 
   output:
   file ('target5-updated-chr*') into TargetChr
-  //file ('ID-target5-1000G.txt') into TargetID
 
   shell:
   '''
@@ -275,7 +284,6 @@ process QC2{
   file data from SNPsFilter2.collect()
   file data from FreqResult.collect()
   file data from FreqResultId.collect()
-  //file data from TargetID.collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
   file data from Channel.fromPath(params.folder+'ALL.chr_test.legend').collect()
   file data from Channel.fromPath(params.targetDir+"*.bim").collect()
@@ -336,7 +344,7 @@ process Make_Chunks{
   input:
   val chromosome from 1..22
   file data from FilterFinal.collect()
-  file data from Channel.fromPath("/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/vcf/*").collect()
+  file data from Channel.fromPath(params.VCFref).collect()
 
   output:
   env chunks into NbChunk
@@ -380,8 +388,8 @@ process Imputation{
   val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
   val chromosomes from NbChr.splitText()
 
-  file data from Channel.fromPath("/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/vcf/*").collect()
-  file data from Channel.fromPath("/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/m3vcf/*").collect()
+  file data from Channel.fromPath(params.VCFref).collect()
+  file data from Channel.fromPath(params.M3VCFref).collect()
 
 
   file data from FilterFinal2.collect()
@@ -404,6 +412,8 @@ process Imputation{
   bcftools index -f chr${chr}-REFfixed.vcf.gz
   eagle --vcfRef ALL.chr${chr}_GRCh38.genotypes.20170504.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /home/lipinskib/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
   #${ref_haps}
+  
+  #?????????????????
   sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
 
   ## -- 22 : Imputation
@@ -428,6 +438,7 @@ process Concatenation{
   chr=!{chromosomes}
   mkdir chr_${chr}
   ls chr_${chr}_chunk*.imputed.dose.vcf.gz> chr_${chr}_imp_res.txt
+  
   ## -- 23 : Concatenation
   bcftools concat --threads 6 -f chr_${chr}_imp_res.txt -Ou | bcftools sort --temp-dir chr_${chr} -Ou | bgzip -c > chr_${chr}_combined.vcf.gz 
   '''}
@@ -437,7 +448,7 @@ process QC3_sh{
   each chromosome from 1..22
   file data from Imputation.collect()
   file data from Admixture2.collect()
-  file data from Channel.fromPath("/data/gep/MR_Signatures/work/Boris/protocol_min/data/files/ref/vcf/*.bcf*").collect()
+  file data from Channel.fromPath(params.BCFref).collect()
 
   output:
   file '*.{txt,frq}' into PostImputation_QC_sh_result
@@ -446,6 +457,7 @@ process QC3_sh{
   '''
   pop=!{population}
   chr=!{chromosome}
+
   ## -- 24 : QC3
   bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
   '''}
