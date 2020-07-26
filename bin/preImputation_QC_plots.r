@@ -12,7 +12,6 @@ pop_ref=as.character(commandArgs(TRUE)[2]) #"EAS" #"EUR" "AFR"
 #pop="CEU" #"YRI"
 #pop_ref="EUR" #"AFR"
 
-
 af_diff=0.2
 af_fc=5
 
@@ -77,8 +76,15 @@ custom_f=function(id,a1,a2,a1_flip,maf){
 }
 chip_updated[, flip_MAF := mcmapply(custom_f,SNP,A1,A2,A1_flip,MAF,mc.cores=2L)]
 
+custom_f=function(id){
+  id=unlist(strsplit(id,":"))[1]
+  return(id)
+}
+
+#if(is.na(unlist(strsplit(panel$id[1],":"))[4])==FALSE){panel[, id := mcmapply(custom_f,id,mc.cores=2L)]}
+
 # Take an intersection of the panel and chip data
-isec <- merge(chip_updated[,.SD,.SDcols=c(2,10)], panel[,.SD,.SDcols=c("id",pop_ref)], by.x="SNP",by.y="id",all.x=T)
+isec <- merge(chip_updated[,.SD,.SDcols=c(2,10)], panel[,.SD,.SDcols=c("id",pop_ref)], by.x="SNP",by.y="id",all.x=F)
 colnames(isec)
 colnames(isec)[c(3,2)] <- c("AF_PANEL", "AF_CHIP")
 
