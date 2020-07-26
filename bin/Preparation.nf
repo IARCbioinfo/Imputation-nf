@@ -194,7 +194,7 @@ process M3VCF_ALL{
   bcftools index --tbi --threads 4 ALL.chr\${CHR}_GRCh38.genotypes.20170504.vcf.gz -o ALL.chr\${CHR}_GRCh38.vcf.gz.tbi
   bcftools view --threads 4 -g ^miss ALL.chr\${CHR}_GRCh38.genotypes.20170504.vcf.gz -Oz -o ALL.chr\${CHR}_GRCh38.vcf.gz
   bcftools index --threads 4 ALL.chr\${CHR}_GRCh38.vcf.gz
-  ~/minimac3/Minimac3-master/bin/Minimac3 --cpus 4 --refHaps ALL.chr\${CHR}_GRCh38.vcf.gz --processReference --prefix ALL.chr\${CHR}
+  Minimac3 --cpus 4 --refHaps ALL.chr\${CHR}_GRCh38.vcf.gz --processReference --prefix ALL.chr\${CHR}
   """}
 /*
 process M3VCF_X{
