@@ -98,7 +98,7 @@ params.M3VCFref = params.ref+"m3vcf/*"
 params.conversion = "hg38"
 params.chain = params.folder
 
-params.out = params.input+'/'
+params.out = params.input
 
 process UpdateHG38{ 
   input:
