@@ -85,7 +85,7 @@ params.targetDir = params.input+params.target+'/'
 
 params.folder = params.input+'files/'
 params.legend = params.folder+'ALL.chr_GRCh38.genotypes.20170504.legend'
-legend_file = file(params.folder+'ALL.chr_GRCh38.genotypes.20170504.legend')
+legend_file = file( params.legend )
 params.fasta = params.folder+'GRCh38_full_analysis_set_plus_decoy_hla.fa'
 params.fasta_fai = params.folder+'GRCh38_full_analysis_set_plus_decoy_hla.fa.fai'
 
@@ -109,8 +109,8 @@ process UpdateHG38{
   //file data from Channel.fromPath(params.folder+'params.chain').collect()
 
   output:
-  file ('*-updated.{bed,bim,fam}') into TargetUpdate
-  file ('*-updated.bim') into TargetQC2
+  file ('*-updated2.{bed,bim,fam}') into TargetUpdate
+  file ('*-updated2.bim') into TargetQC2
 
   shell:
   '''
@@ -141,6 +141,8 @@ process UpdateHG38{
   perl HRC-1000G-check-bim-NoReadKey.pl -b !{params.target}.bim -f dataset3.frq -r !{params.legend} -g -x -n
   grep -v "real-ref-alleles" Run-plink.sh> Run-plink-update.sh 
   bash Run-plink-update.sh
+
+  plink --bfile !{params.target}-update --update-name ID-test_s-1000G.txt --make-bed --out !{params.target}-update2
   '''}
 process Admixture{
   input:
@@ -163,8 +165,8 @@ process Admixture{
   awk '{print $2}' !{params.origin}.bim | sort > ref_SNPs.txt
 
   ## -- Target -- ##
-  grep -Fwf AIM_list.txt !{params.target}-updated.bim | awk '{print $2}' > target_SNPs.txt #-updated
-  plink --bfile !{params.target}-updated --extract target_SNPs.txt --make-bed --out target #-updated
+  grep -Fwf AIM_list.txt !{params.target}-updated2.bim | awk '{print $2}' > target_SNPs.txt #-updated
+  plink --bfile !{params.target}-updated2 --extract target_SNPs.txt --make-bed --out target #-updated
 
   ## -- Get common SNPs -- ##
   grep -Fwf <(cat ref_SNPs.txt) <(awk '{print $2}' target.bim)  > target_common_SNPs.txt
@@ -198,11 +200,11 @@ process Admixture{
   Rscript !{baseDir}/bin/create_pop_file.r merge.fam ind_pop.txt merge.pop
   K=3
   admixture --cv merge.bed $K --supervised -j40 | tee log${K}.out
-  Rscript !{baseDir}/bin/process_admixture.r !{params.target}-updated
+  Rscript !{baseDir}/bin/process_admixture.r !{params.target}-updated2
 
   ############################################################################################
   ## -- 4 : First filtering step
-  plink --bfile !{params.target}-updated --geno !{params.geno1} --make-bed --out target3
+  plink --bfile !{params.target}-updated2 --geno !{params.geno1} --make-bed --out target3
   plink --bfile target3 --maf !{params.maf} --make-bed --out target4
   '''}
 process Filtering1{
