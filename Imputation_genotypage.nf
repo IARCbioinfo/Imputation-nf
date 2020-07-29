@@ -349,8 +349,8 @@ process QC2{
 
   shell:
   '''
-  head -n1 !{params.legend} >> ref_freq_withHeader.txt
-  grep -Fwf <(awk '{print $2}' !{params.target}-updated.bim) <(cat !{params.legend}) > ref_freq.txt
+  head -n1 !{legend} >> ref_freq_withHeader.txt
+  grep -Fwf <(awk '{print $2}' !{params.target}-updated.bim) <(cat !{legend}) > ref_freq.txt
   cat ref_freq.txt >> ref_freq_withHeader.txt
 
   pop=!{rspop}
