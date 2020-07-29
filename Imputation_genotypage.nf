@@ -85,6 +85,7 @@ params.targetDir = params.input+params.target+'/'
 
 params.folder = params.input+'files/'
 params.legend = params.folder+'ALL.chr_GRCh38.genotypes.20170504.legend'
+legend_file = file(params.folder+'ALL.chr_GRCh38.genotypes.20170504.legend')
 params.fasta = params.folder+'GRCh38_full_analysis_set_plus_decoy_hla.fa'
 params.fasta_fai = params.folder+'GRCh38_full_analysis_set_plus_decoy_hla.fa.fai'
 
@@ -348,10 +349,9 @@ process QC2{
   file ('*.pdf') into FigureQC2
 
   shell:
-  legend = file(params.legend)
   '''
-  head -n1 !{legend} >> ref_freq_withHeader.txt
-  grep -Fwf <(awk '{print $2}' !{params.target}-updated.bim) <(cat !{legend}) > ref_freq.txt
+  head -n1 !{legend_file} >> ref_freq_withHeader.txt
+  grep -Fwf <(awk '{print $2}' !{params.target}-updated.bim) <(cat !{legend_file}) > ref_freq.txt
   cat ref_freq.txt >> ref_freq_withHeader.txt
 
   pop=!{rspop}
