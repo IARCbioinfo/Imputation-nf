@@ -330,7 +330,7 @@ process Filtering3{
   bash Run-plink.sh
   '''}
 
-legend = file(params.legend)
+
 
 process QC2{
   publishDir params.out+'../result/'+params.target+'/QC2/', mode: 'copy'
@@ -342,12 +342,13 @@ process QC2{
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
   //file data from Channel.fromPath(params.folder+params.legend).collect()
   file data from TargetQC2.collect()
-  file legend
+
 
   output:
   file ('*.pdf') into FigureQC2
 
   shell:
+  legend = file(params.legend)
   '''
   head -n1 !{legend} >> ref_freq_withHeader.txt
   grep -Fwf <(awk '{print $2}' !{params.target}-updated.bim) <(cat !{legend}) > ref_freq.txt
