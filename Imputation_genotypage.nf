@@ -330,6 +330,8 @@ process Filtering3{
   bash Run-plink.sh
   '''}
 
+legend = file(params.legend)
+
 process QC2{
   publishDir params.out+'../result/'+params.target+'/QC2/', mode: 'copy'
 
@@ -340,7 +342,7 @@ process QC2{
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
   //file data from Channel.fromPath(params.folder+params.legend).collect()
   file data from TargetQC2.collect()
-  file file(params.legend)
+  file legend
 
   output:
   file ('*.pdf') into FigureQC2
