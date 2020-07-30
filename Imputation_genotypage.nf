@@ -353,6 +353,7 @@ process QC2{
 
   shell:
   '''
+  head -n1 !{legend_file} >> ref_freq_withHeader.txt
   grep -Fwf <(awk '{print $2}' !{params.target}-updated.bim) <(cat !{legend_file}) > ref_freq.txt
   cat ref_freq.txt >> ref_freq_withHeader.txt
 
