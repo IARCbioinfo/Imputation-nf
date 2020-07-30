@@ -101,6 +101,18 @@ params.chain = params.folder
 
 params.out = params.input
 
+
+process UpdateHG381{ 
+  //input:
+  //file data from Channel.fromPath(params.targetDir+'*').collect()
+  //file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
+  //file data from Channel.fromPath(params.folder+'params.legend').collect()
+  //file data from Channel.fromPath(params.folder+'params.chain').collect()
+
+  shell:
+  '''
+  head -n1 !{legend_file} >> ref_freq_withHeader.txt
+  '''}
 process UpdateHG38{ 
   input:
   file data from Channel.fromPath(params.targetDir+'*').collect()
@@ -351,7 +363,6 @@ process QC2{
 
   shell:
   '''
-  head -n1 !{legend_file} >> ref_freq_withHeader.txt
   grep -Fwf <(awk '{print $2}' !{params.target}-updated.bim) <(cat !{legend_file}) > ref_freq.txt
   cat ref_freq.txt >> ref_freq_withHeader.txt
 
