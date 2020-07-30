@@ -252,6 +252,9 @@ process Download_file{
   wget http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.fai
   wget https://www.well.ox.ac.uk/~wrayner/tools/HRC-1000G-check-bim-v4.2.13-NoReadKey.zip
   unzip *.zip
+
+  sed -i "s/#\$temp/\$temp/g" HRC-1000G-check-bim-NoReadKey.pl
+  sed -i "s/#print SH/print SH/g" HRC-1000G-check-bim-NoReadKey.pl
   """}
 process hapmap_peparation{
   publishDir params.out+'files/', mode: 'copy'

@@ -114,6 +114,7 @@ process UpdateHG38{
 
   shell:
   '''
+  head -n1 !{legend_file} >> ref_freq_withHeader.txt
   ############################################################################################
   ## -- 0 : Update version of the tergat dataset : hg18 --> hg38
   if [ !{params.conversion} != "hg38" ] ; then
