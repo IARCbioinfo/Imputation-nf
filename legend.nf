@@ -117,7 +117,7 @@ process UpdateHG381{
 }
 
 
-process UpdateHG381{ 
+process UpdateHG3813{ 
   input:
   //file data from Channel.fromPath(params.targetDir+'*').collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
