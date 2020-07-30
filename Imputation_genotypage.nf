@@ -102,17 +102,7 @@ params.chain = params.folder
 params.out = params.input
 
 
-process UpdateHG381{ 
-  //input:
-  //file data from Channel.fromPath(params.targetDir+'*').collect()
-  //file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  //file data from Channel.fromPath(params.folder+'params.legend').collect()
-  //file data from Channel.fromPath(params.folder+'params.chain').collect()
 
-  shell:
-  '''
-  head -n1 !{legend_file} >> ref_freq_withHeader.txt
-  '''}
 process UpdateHG38{ 
   input:
   file data from Channel.fromPath(params.targetDir+'*').collect()
@@ -126,7 +116,6 @@ process UpdateHG38{
 
   shell:
   '''
-  head -n1 !{legend_file} >> ref_freq_withHeader.txt
   ############################################################################################
   ## -- 0 : Update version of the tergat dataset : hg18 --> hg38
   if [ !{params.conversion} != "hg38" ] ; then
@@ -354,6 +343,7 @@ process QC2{
   file data from FreqResult.collect()
   file data from FreqResultId.collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
+  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
   //file data from Channel.fromPath(params.folder+params.legend).collect()
   file data from TargetQC2.collect()
 
