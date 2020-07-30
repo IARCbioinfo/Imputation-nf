@@ -103,7 +103,7 @@ params.out = params.input
 
 
 process UpdateHG381{ 
-  //input:
+  input:
   //file data from Channel.fromPath(params.targetDir+'*').collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
   //file data from Channel.fromPath(params.folder+'params.legend').collect()
