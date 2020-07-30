@@ -130,3 +130,15 @@ process UpdateHG3813{
   '''
   
 }
+
+
+process UpdateHG383{ 
+  input:
+  file legend_file
+
+  shell:
+  '''
+  head -n1 !{legend_file} >> ref_freq_withHeader.txt
+  '''
+  
+}
