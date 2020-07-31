@@ -445,7 +445,7 @@ process Imputation{
   input:
   val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
   val chromosomes from NbChr.splitText()
-
+  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
   //file data from Channel.fromPath(params.VCFref).collect()
   //file data from Channel.fromPath(params.BCFref).collect()
   //file data from Channel.fromPath(params.M3VCFref).collect()
