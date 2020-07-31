@@ -384,7 +384,7 @@ process Filtering4{
   shell:
   '''
   chr=!{chromosome}
-
+  export TMPDIR=/tmp/
   ## -- 16 : Remove ambiguous strand/unknown SNPs
   awk '{ if (($5=="T" && $6=="A")||($5=="A" && $6=="T")||($5=="C" && $6=="G")||($5=="G" && $6=="C")) print $2, "ambig" ; else print $2 ;}' target5-updated-chr${chr}.bim | grep -v ambig | grep -v -e --- | sort -u > NonAmbiguous${chr}.snplist.txt
   plink --bfile target5-updated-chr${chr} --extract NonAmbiguous${chr}.snplist.txt --output-chr chr26 --make-bed --out target6_chr${chr}
