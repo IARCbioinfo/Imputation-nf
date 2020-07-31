@@ -403,6 +403,7 @@ process Make_Chunks{
   val chromosome from 1..22
   file data from FilterFinal.collect()
   //file data from Channel.fromPath(params.BCFref).collect()
+  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
 
   output:
   env chunks into NbChunk
