@@ -332,9 +332,6 @@ process Filtering3{
   perl HRC-1000G-check-bim-NoReadKey.pl -b target5.bim -f target6.frq -r !{params.legend} -g -x -n
   bash Run-plink.sh
   '''}
-
-
-
 process QC2{
   publishDir params.out+'../result/'+params.target+'/QC2/', mode: 'copy'
 
@@ -530,6 +527,3 @@ process QC3_R{
   pop=!{population}
   Rscript !{baseDir}/bin/postImputation_QC_plots.r ${pop} 0.3
   '''}
-
-
-
