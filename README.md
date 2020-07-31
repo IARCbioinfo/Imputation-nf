@@ -12,14 +12,13 @@
 The pipeline used to perform the imputation of several targets datasets processed with standard input.
 
 Here is a summary of the method :
-- Preprocessing of target dataset if necessary : by using the nextflow script Preparation_dataset.nf which take the dataset plink file (.bed/.bim/.fam) in input.
+- Preprocessing of data : by using the nextflow script Preparation.nf with create a directory "file/" with all the dependencies.
 - First step : Origin estimation of sample from the target dataset by using admixture tools and the hapmap dataset as reference.
 - Second step : Series of SNPs filters and quality checking from the target dataset before the imputation step.
 - Third step : VCF production
 - Last step : Phasing and imputation
 
-
-See the Usage section to test the full pipeline with the hapmap dataset like admixture's reference and HGDP dataset as target.
+See the Usage section to test the full pipeline with your target dataset.
 
 ## Dependencies
 The pipeline works under Linux distributions.
@@ -46,30 +45,19 @@ The pipeline works under Linux distributions.
 - Admixture tool : [relationships_w_pops_121708.txt](ftp://ftp.ncbi.nlm.nih.gov/hapmap/genotypes/2009-01_phaseIII/plink_format/relationships_w_pops_121708.txt)
 - [CheckVCF](https://github.com/zhanxw/checkVCF/raw/master/checkVCF.py), [Fasta file in V37](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz) & [Fasta file in V38](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/)
 - [1000G Reference in Hg38](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/GRCh38_positions/) with the [doc](https://data.broadinstitute.org/alkesgroup/Eagle/#x1-320005.3.2)
-
+- Create [legend](https://imputationserver.readthedocs.io/en/latest/create-reference-panels/#create-legend-files), [bcf](https://data.broadinstitute.org/alkesgroup/Eagle/#x1-320005.3.2) & [m3vcf](https://imputationserver.readthedocs.io/en/latest/create-reference-panels/#create-m3vcf-files) files for the reference
 
 4. Other to know : 
-- Create [legend](https://imputationserver.readthedocs.io/en/latest/create-reference-panels/#create-legend-files), [bcf](https://data.broadinstitute.org/alkesgroup/Eagle/#x1-320005.3.2) & [m3vcf](https://imputationserver.readthedocs.io/en/latest/create-reference-panels/#create-m3vcf-files) files for the reference
-- See the Usage part to know make the environment to run the pipeline
+- See the Usage part to create the environment to run the pipeline. All the necessary dependencies are download with the using of the script Preparation.nf. To run it, you'll need to install the next software : in2csv(1.0.5), liftOver, plink, Minimac3(2.0.1) & bcftools
 
-
-You can avoid installing all the external software by only installing Docker. See the [IARC-nf](https://github.com/IARCbioinfo/IARC-nf) repository for more information.
-
-
+You can avoid installing all the external software of the main scritp by only installing Docker. See the [IARC-nf](https://github.com/IARCbioinfo/IARC-nf) repository for more information.
 
 
 ## Input
   | Type      | Description     |
   |-----------|---------------|
-  | Plink datasets | Corresponds to the admixture reference's dataset and the target dataset to be analysed, both already preprocessed by filters found in the Preparation_dataset.nf. Composed by the following files : bed, bim & fam |
-
-
-
-  Specify the test files location
-
-
-
-
+  | Plink datasets | Corresponds to the target dataset to be analysed. Composed by the following files : bed, bim & fam |
+  | Input environment | Path to your input directory |
 
 
 ## Parameters
@@ -77,13 +65,13 @@ You can avoid installing all the external software by only installing Docker. Se
   * #### Mandatory
 | Name      | Example value | Description     |
 |-----------|---------------|-----------------|
-| --target | HGDP | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink. The data have to be placed in the main directory and in a directory which have the same name that the parttern name of the dataset. (for example : 'user/main_data/HGDP/')|
-
+| --target  | my_target | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink |
+| --input   | user/main_data/ | The path of the main directory where we can find 2 directory : my_target/ + files/ |
 
   * #### Optional
 | Name      | Default value | Description     |
 |-----------|---------------|-----------------|
-|--input| user/main_data/ | The path of the main directory. WARNING : for now, you have to create a 'user/main_data/data_start' directory where we can find all the data to download before to run the script. |
+
 |--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline |
 | --geno1   |          0.03 | First genotyping call rate plink threshold, apply in the full target dataset |
 | --geno2   |          0.03 | Second genotyping call rate plink threshold, apply in the target dataset divide by population |
@@ -107,7 +95,6 @@ Flags are special parameters without value.
 | Name      | Description     |
 |-----------|-----------------|
 | --help    | Display help |
-| --flag2   |      .... |
 
 
 ## Usage
@@ -119,7 +106,7 @@ Flags are special parameters without value.
   nextflow run IARCbioinfo/bin/Preparation.nf
   ```
 
-2. Paste the bim/bed/fam plink target files in a directory, and the directory in your "data/" directory. You have to call the plink files and your directory with the same pattern, as the following exemple : data/target/target{.bed,.bim,.fam}. So now you have 2 directories : 
+2. Paste the bim/bed/fam plink target files in a directory, and the directory in your "data/" directory. You have to call the plink files and your directory with the same pattern, as the following exemple : data/target/target{.bed,.bim,.fam}. So now you have 2 directories in your "data/" repertory : 
 
 _ data/my_target/ : with the plink target files (my_target.bed, my_target.bim, my_target.fam).
 
@@ -128,7 +115,7 @@ _ data/files/ : with all the dependencies.
 3. Run the imputation pipeline.
 
   ```
-  nextflow run IARCbioinfo/Imputation.nf --target my_target -r v1.0 -profile singularity 
+  nextflow run IARCbioinfo/Imputation.nf --target my_target --input /data/ -r v1.0 -profile singularity 
   ```
 
 ## Output
