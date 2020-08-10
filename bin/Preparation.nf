@@ -191,10 +191,10 @@ process M3VCF_ALL{
   shell:
   """
   CHR=!{chromosome}
-  bcftools index --tbi --threads 4 ALL.chr\${CHR}_GRCh38.genotypes.20170504.vcf.gz -o ALL.chr\${CHR}_GRCh38.vcf.gz.tbi
-  bcftools view --threads 4 -g ^miss ALL.chr\${CHR}_GRCh38.genotypes.20170504.vcf.gz -Oz -o ALL.chr\${CHR}_GRCh38.vcf.gz
-  bcftools index --threads 4 ALL.chr\${CHR}_GRCh38.vcf.gz
-  Minimac3 --cpus 4 --refHaps ALL.chr\${CHR}_GRCh38.vcf.gz --processReference --prefix ALL.chr\${CHR}
+  bcftools index --tbi --threads 4 ALL.chr\${CHR}_GRCh38.genotypes.20170504.bcf -o ALL.chr\${CHR}_GRCh38.bcf.tbi
+  bcftools view --threads 4 -g ^miss ALL.chr\${CHR}_GRCh38.genotypes.20170504.bcf -Oz -o ALL.chr\${CHR}_GRCh38.bcf
+  bcftools index --threads 4 ALL.chr\${CHR}_GRCh38.bcf
+  Minimac3 --cpus 4 --refHaps ALL.chr\${CHR}_GRCh38.bcf --processReference --prefix ALL.chr\${CHR} --chr chr\${CHR}
   """}
 /*
 process M3VCF_X{

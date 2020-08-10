@@ -80,7 +80,7 @@ params.hwe = 1e-8
 
 // -- Path :
 params.input = null
-params.out = null
+params.output = null
 params.script = 'IARCbioinfo/Imputation-nf/bin/' 
 params.targetDir = params.input+params.target+'/'
 
@@ -95,7 +95,7 @@ params.originDir = params.folder+params.origin+'/'
 params.ref=params.folder+"ref/"
 params.VCFref = params.ref+"vcf/*"
 params.BCFref = params.ref+"bcf/"
-params.M3VCFref = params.ref+"m3vcf/*"
+params.M3VCFref = params.ref+"m3vcf/"
 
 params.conversion = "hg38"
 params.chain = params.folder
@@ -455,10 +455,10 @@ process Imputation{
   eagle --vcfRef !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
   
   #?????????????????
-  sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
+  #sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
 
   ## -- 22 : Imputation
-  minimac4 --refHaps !{params.M3VCFref}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
+  minimac4 --refHaps !{params.M3VCFref}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 --chr chr${chr} > chr_${chr}_chunk${chunk}.logimpute
   bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
   '''}
 process Concatenation{
