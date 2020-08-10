@@ -69,8 +69,8 @@ if (params.help) {
 log.info "help:                               ${params.help}"
 }
 
-// ## -- Option :
-params.target = null      //HGDP & TCGA
+// -- Option :
+params.target = null
 params.origin = "hapmap_r23a"
 params.geno1 = 0.03 
 params.geno2 = 0.03
@@ -78,8 +78,9 @@ params.maf = 0.01
 params.pihat = 0.185
 params.hwe = 1e-8 
 
-// ## -- Path :
-params.input = null //data/gep/MR_Signatures/work/Boris/protocol_min/data/
+// -- Path :
+params.input = null
+params.out = null
 params.script = 'IARCbioinfo/Imputation-nf/bin/' 
 params.targetDir = params.input+params.target+'/'
 
@@ -99,16 +100,11 @@ params.M3VCFref = params.ref+"m3vcf/*"
 params.conversion = "hg38"
 params.chain = params.folder
 
-params.out = params.input
-
-
-
+// -- Pipeline :
 process UpdateHG38{ 
   input:
   file data from Channel.fromPath(params.targetDir+'*').collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  //file data from Channel.fromPath(params.folder+'params.legend').collect()
-  //file data from Channel.fromPath(params.folder+'params.chain').collect()
 
   output:
   file ('*-updated.{bed,bim,fam}') into TargetUpdate
@@ -117,7 +113,7 @@ process UpdateHG38{
   shell:
   '''
   ############################################################################################
-  ## -- 0 : Update version of the tergat dataset : hg18 --> hg38
+  ## -- 0 : Update version of the tergat dataset : hg18/19 --> hg38
   if [ !{params.conversion} != "hg38" ] ; then
     awk '{print "chr" $1, $4 -1, $4, $2 }' !{params.target}.bim | sed 's/chr23/chrX/' | sed 's/chr24/chrY/' > dataset.tolift
 
@@ -148,7 +144,6 @@ process Admixture{
   input:
   file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
   file data from Channel.fromPath(params.originDir+"*").collect()
-  //file data from Channel.fromPath(params.targetDir+"*").collect()
   file data from TargetUpdate.collect()
 
   output:
@@ -243,7 +238,7 @@ process Filtering1{
   awk 'NR==FNR {a[$1,$2]=$5;next}($1,$2) in a{print $1,$2,$6,a[$1,$2]}' het_${pop}.txt miss_${pop}.imiss > het_${pop}.imiss.txt
   '''}
 process QC1{
-  publishDir params.out+'../result/'+params.target+'/QC1/', mode: 'copy'
+  publishDir params.out+'result/'+params.target+'/QC1/', mode: 'copy'
 
   input:
   file data from QC.collect()
@@ -262,7 +257,6 @@ process Filtering2{
   input:
   file data from TargetFilter.collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  //file data from Channel.fromPath(params.folder+params.legend).collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
 
   output:
@@ -296,7 +290,7 @@ process Filtering2{
 
 
 process Make_SNP_Filtering{
-  publishDir params.out+'../result/'+params.target+'/SNP_filtering/', mode: 'copy'
+  publishDir params.out+'result/'+params.target+'/SNP_filtering/', mode: 'copy'
   input:
   file data from DirFiltering.collect()
   file data from HWresult.collect()
@@ -316,7 +310,6 @@ process Filtering3{
   input:
   file data from Merge2.collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  //file data from Channel.fromPath(params.folder+params.legend).collect()
   file data from SNPsFilter.collect()
 
   output:
@@ -333,7 +326,7 @@ process Filtering3{
   bash Run-plink.sh
   '''}
 process QC2{
-  publishDir params.out+'../result/'+params.target+'/QC2/', mode: 'copy'
+  publishDir params.out+'result/'+params.target+'/QC2/', mode: 'copy'
 
   input:
   file data from SNPsFilter2.collect()
@@ -341,7 +334,6 @@ process QC2{
   file data from FreqResultId.collect()
   val rspop from Channel.from("CEU","CHB_JPT","YRI")
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  //file data from Channel.fromPath(params.folder+params.legend).collect()
   file data from TargetQC2.collect()
 
 
@@ -372,7 +364,7 @@ process Filtering4{
   file data from TargetChr.collect()
   file data from Channel.fromPath(params.folder+'checkVCF.py').collect()
   file data from Channel.fromPath(params.fasta+'*').collect()
-  val chromosome from 1..22 //23
+  val chromosome from 1..22
 
   output:
   file ('*-REFfixed.vcf.gz') into FilterFinal
@@ -399,7 +391,6 @@ process Make_Chunks{
   input:
   val chromosome from 1..22
   file data from FilterFinal.collect()
-  //file data from Channel.fromPath(params.BCFref).collect()
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
 
   output:
@@ -442,12 +433,8 @@ process Imputation{
   input:
   val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
   val chromosomes from NbChr.splitText()
+
   file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  //file data from Channel.fromPath(params.VCFref).collect()
-  //file data from Channel.fromPath(params.BCFref).collect()
-  //file data from Channel.fromPath(params.M3VCFref).collect()
-
-
   file data from FilterFinal2.collect()
   file data from ChunkSplit.collect()
 
@@ -465,7 +452,7 @@ process Imputation{
 
   ## -- 21 : Phasing
   bcftools index -f chr${chr}-REFfixed.vcf.gz
-  eagle --vcfRef !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile ~/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
+  eagle --vcfRef !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom ${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
   
   #?????????????????
   sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
@@ -475,7 +462,7 @@ process Imputation{
   bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
   '''}
 process Concatenation{
-  publishDir params.out+'../result/'+params.target+'/Result_Imputation/', mode: 'copy'
+  publishDir params.out+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
   cpus=6
 
   input:
@@ -514,7 +501,7 @@ process QC3_sh{
   bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
   '''}
 process QC3_R{
-  publishDir params.out+'../result/'+params.target+'/QC3/', mode: 'copy'
+  publishDir params.out+'result/'+params.target+'/QC3/', mode: 'copy'
   input:
   val population from('ALL','CEU','YRI','CHB_JPT')
   file data from PostImputation_QC_sh_result.collect()
