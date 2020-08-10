@@ -65,7 +65,7 @@ process Download{
   file '*GRCh38*' into VCF_Legend_X
   file '*GRCh38*' into VCF_Legend_Y
 
-  file '*GRCh38*' into VCF_M3VCF
+  //file '*GRCh38*' into VCF_M3VCF
 
   shell:
   """
@@ -182,7 +182,7 @@ process M3VCF_ALL{
   cpus=4
 
   input:
-  file data from VCF_M3VCF.collect()
+  file data from Bcf_ALL.collect()
   val chromosome from 1..22
 
   output:
