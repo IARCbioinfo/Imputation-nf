@@ -458,7 +458,7 @@ process Imputation{
   #sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
 
   ## -- 22 : Imputation
-  minimac4 --refHaps !{params.M3VCFref}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr ${chr} --start $start --end $end --window 500000 --chr chr${chr} > chr_${chr}_chunk${chunk}.logimpute
+  minimac4 --refHaps !{params.M3VCFref}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr chr${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
   bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
   '''}
 process Concatenation{

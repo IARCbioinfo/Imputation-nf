@@ -13,13 +13,6 @@ args <- commandArgs(TRUE)
 pop <- args[1]       
 INFO_thr <- as.numeric(args[2])
 
-#cluster_path="/home/gabriela/remoteDir/";cluster_path=""
-#project_path=paste0(cluster_path,"/data/gep/MR_Signatures/work/gabriela/GIT_Rstudio_project/")
-#output_path=paste0(project_path,"results/figures/imputation_QCs_CEU/")
-#imputation_path=paste0(cluster_path,"/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/imputation_results_CEU/")
-# pop="ALL" #CEU YRI CHB_JPT
-# INFO_thr=0
-
 ref_AF=c("EUR_AF","EUR_AF","AFR_AF","EAS_AF")
 names(ref_AF)=c("ALL","CEU","YRI","CHB_JPT")
 

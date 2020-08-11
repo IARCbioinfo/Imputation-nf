@@ -5,7 +5,6 @@
 
 
 chr=$1
-#refs_path="/data/gep/MR_Signatures/work/gabriela/imputation/January_2020/ref_data/"
 pop=$2
 
 
@@ -22,7 +21,7 @@ then
   echo -e 'CHR\tSNP\tREF\tALT\tAF\tINFO\tAF_GROUP' > INFO_group_chr${chr}.txt
 
   # Query the required fields and add frequency group (1, 2 or 3) as the last column  chr_${chr}_combined.vcf.gz
-  bcftools +fill-tags chr_${chr}_combined.vcf.gz -- -t AF,AN,AC | bcftools  query -f 'chr%CHROM\tchr%CHROM\_%POS\_%REF\_%ALT\t%REF\t%ALT\t%INFO/AF\t%INFO/R2\t-\n' | \
+  bcftools +fill-tags chr_${chr}_combined.vcf.gz -- -t AF,AN,AC | bcftools  query -f '%CHROM\tchr%CHROM\_%POS\_%REF\_%ALT\t%REF\t%ALT\t%INFO/AF\t%INFO/R2\t-\n' | \
   # Here $5 refers to AF values, $7 refers to AF group
   awk -v OFS="\t" \
       '{if ($5>=0.05 && $5<=0.95) $7=1; \
@@ -41,7 +40,7 @@ then
   # Generate a header for the output file
   #echo -e 'CHR\tSNP\tREF\tALT\tAF\tINFO\tAF_GROUP' > INFO_group_chr${chr}_${pop}.txt
 
-  bcftools view -S samples_${pop}_chr${chr}.txt chr_${chr}_combined.vcf.gz | bcftools +fill-tags -- -t AF | bcftools query -f 'chr%CHROM\tchr%CHROM\_%POS\_%REF\_%ALT\t%REF\t%ALT\t%INFO/AF\t%INFO/R2\t-\n' | \
+  bcftools view -S samples_${pop}_chr${chr}.txt chr_${chr}_combined.vcf.gz | bcftools +fill-tags -- -t AF | bcftools query -f '%CHROM\tchr%CHROM\_%POS\_%REF\_%ALT\t%REF\t%ALT\t%INFO/AF\t%INFO/R2\t-\n' | \
   # Here $5 refers to AF values, $7 refers to AF group
   awk -v OFS="\t" \
       '{if ($5>=0.05 && $5<=0.95) $7=1; \

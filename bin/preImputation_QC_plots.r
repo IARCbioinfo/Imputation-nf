@@ -9,9 +9,6 @@ library(hexbin)
 pop=as.character(commandArgs(TRUE)[1]) #"CHB_JPT"  #"CEU" "YRI"
 pop_ref=as.character(commandArgs(TRUE)[2]) #"EAS" #"EUR" "AFR"
 
-#pop="CEU" #"YRI"
-#pop_ref="EUR" #"AFR"
-
 af_diff=0.2
 af_fc=5
 
