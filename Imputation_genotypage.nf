@@ -238,7 +238,7 @@ process Filtering1{
   awk 'NR==FNR {a[$1,$2]=$5;next}($1,$2) in a{print $1,$2,$6,a[$1,$2]}' het_${pop}.txt miss_${pop}.imiss > het_${pop}.imiss.txt
   '''}
 process QC1{
-  publishDir params.out+'result/'+params.target+'/QC1/', mode: 'copy'
+  publishDir params.output+'result/'+params.target+'/QC1/', mode: 'copy'
 
   input:
   file data from QC.collect()
@@ -290,7 +290,7 @@ process Filtering2{
 
 
 process Make_SNP_Filtering{
-  publishDir params.out+'result/'+params.target+'/SNP_filtering/', mode: 'copy'
+  publishDir params.output+'result/'+params.target+'/SNP_filtering/', mode: 'copy'
   input:
   file data from DirFiltering.collect()
   file data from HWresult.collect()
@@ -326,7 +326,7 @@ process Filtering3{
   bash Run-plink.sh
   '''}
 process QC2{
-  publishDir params.out+'result/'+params.target+'/QC2/', mode: 'copy'
+  publishDir params.output+'result/'+params.target+'/QC2/', mode: 'copy'
 
   input:
   file data from SNPsFilter2.collect()
@@ -462,7 +462,7 @@ process Imputation{
   bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
   '''}
 process Concatenation{
-  publishDir params.out+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
+  publishDir params.output+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
   cpus=6
 
   input:
@@ -501,7 +501,7 @@ process QC3_sh{
   bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
   '''}
 process QC3_R{
-  publishDir params.out+'result/'+params.target+'/QC3/', mode: 'copy'
+  publishDir params.output+'result/'+params.target+'/QC3/', mode: 'copy'
   input:
   val population from('ALL','CEU','YRI','CHB_JPT')
   file data from PostImputation_QC_sh_result.collect()
@@ -513,5 +513,4 @@ process QC3_R{
   '''
   pop=!{population}
   Rscript !{baseDir}/bin/postImputation_QC_plots.r ${pop} 0.3
-  '''
-}
+  '''}
