@@ -369,6 +369,7 @@ process Filtering4{
   output:
   file ('*-REFfixed.vcf.gz') into FilterFinal
   file ('*-REFfixed.vcf.gz') into FilterFinal2
+  //file ('*-REFfixed.vcf.gz') into FilterFinal3
 
   shell:
   '''
