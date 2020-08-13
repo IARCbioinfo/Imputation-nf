@@ -30,7 +30,7 @@ log.info ""
 
 if (params.help) {
     log.info "--------------------------------------------------------"
-    log.info "  USAGE : nextflow run IARCbioinfo/Imputation-nf -r v1.0 -profile singularity --target TCGA --input ../data/ "
+    log.info "  USAGE : nextflow run IARCbioinfo/Imputation-nf -r v1.0 -profile singularity --target my_target --input data/ --output result/ "
     log.info "--------------------------------------------------------"
     log.info ""
     log.info "nextflow run IARCbioinfo/Imputation-nf [-r vX.X -profile singularity] [OPTIONS]"
@@ -57,7 +57,10 @@ if (params.help) {
     log.info "--pihat                      FLOAT                      PI_HAT thresold for the data filtering step"
     log.info "--hwe                      FLOAT                      Hardy-Weinberg Equilibrium thresold for the data filtering step"
     log.info "--conversion                      [hg38/hg18/hg19]                      Option to convert data to hg38 version of the genome. Choose 'hg18' to convert your data from hg18 to hg38 or 'hg19' to convert your data from hg19 to hg38. Standard value is 'hg38'."
-
+    log.info "--cloud                      [off/on]                      Option to run the imputation on cloud Michighan and/or TOPMed server. You have to give your Michighan and/or TOPMed token to run it"
+    log.info "--token_Michighan                      TOKEN                      File where you can find your Michighan token as string"
+    log.info "--token_TOPMed                      TOKEN                      File where you can find your TOPMed token as string"
+    log.info "--QC_cloud                      FOLDER                      Folder where you can find the VCF file imputed from the Michighan or TOPMed server"
 
     log.info ""
     log.info "Flags:"
@@ -395,7 +398,7 @@ process Filtering4{
 
 
 //////////////////////////////////////////////////
-if(params.cloud=="off") {
+if(params.cloud=="off"){
   process Make_Chunks{
     input:
     val chromosome from 1..22
@@ -521,47 +524,46 @@ if(params.cloud=="off") {
   pop=!{population}
   Rscript !{baseDir}/bin/postImputation_QC_plots.r ${pop} 0.3
   '''}}
-
 //////////////////////////////////////////////////
-if(params.cloud=="on") {
-  process Cloud_Token{
-    input:
-    file data from Channel.fromPath(params.token_Michighan).collect()
-    file data from Channel.fromPath(params.token_TOPMed).collect()
-    
-    output:
-    env michighan into Michighan
-    env tOPMed into TOPMed
+if(params.cloud=="on"){
+  if (params.token_Michighan){
+    process Michighan_Imputation{
+      input:
+      file data from Channel.fromPath(params.token_Michighan).collect()
+      file data from FilterFinal.collect()
 
-    shell:
-    '''
-    michighan=$(cat !{params.token_Michighan})
-    tOPMed=$(cat !{params.token_TOPMed})
-    '''}
+      shell:
+      '''
+      michighan=$(cat !{params.token_Michighan})
 
-  process Cloud_Imputation{
-  input:
-  file data from FilterFinal3.collect()
-  val michighan from Michighan
-  val tOPMed from TOPMed
+      ## -- Michighan Imputation :
+      ## Reference : 1000G phase 3
+      curl https://imputationserver.sph.umich.edu/api/v2/jobs/submit/minimac4 -H "X-Auth-Token: ${michighan}" \
+          -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr2-REFfixed.vcf.gz" -F "files=@chr3-REFfixed.vcf.gz" -F "files=@chr4-REFfixed.vcf.gz" -F "files=@chr5-REFfixed.vcf.gz" -F "files=@chr6-REFfixed.vcf.gz" -F "files=@chr7-REFfixed.vcf.gz" -F "files=@chr8-REFfixed.vcf.gz" -F "files=@chr9-REFfixed.vcf.gz" -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr11-REFfixed.vcf.gz" -F "files=@chr12-REFfixed.vcf.gz" -F "files=@chr13-REFfixed.vcf.gz" -F "files=@chr14-REFfixed.vcf.gz" -F "files=@chr15-REFfixed.vcf.gz" -F "files=@chr16-REFfixed.vcf.gz" -F "files=@chr17-REFfixed.vcf.gz" -F "files=@chr18-REFfixed.vcf.gz" -F "files=@chr19-REFfixed.vcf.gz" -F "files=@chr20-REFfixed.vcf.gz" -F "files=@chr21-REFfixed.vcf.gz" -F "files=@chr22-REFfixed.vcf.gz" \
+          -F "refpanel=apps@1000g-phase-3-v5" -F "phasing=eagle" -F "mode=imputation" -F "population=mixed" -F "build=hg38"
 
-  shell:
-  '''
-  ## -- TOPMed Imputation :
-  curl -H "X-Auth-Token: !{tOPMed}" \
-    -F "input-files=@chr1-REFfixed.vcf.gz" -F "input-files=@chr2-REFfixed.vcf.gz" -F "input-files=@chr3-REFfixed.vcf.gz" -F "input-files=@chr4-REFfixed.vcf.gz" -F "input-files=@chr5-REFfixed.vcf.gz" -F "input-files=@chr6-REFfixed.vcf.gz" -F "input-files=@chr7-REFfixed.vcf.gz" -F "input-files=@chr8-REFfixed.vcf.gz" -F "input-files=@chr9-REFfixed.vcf.gz" -F "input-files=@chr10-REFfixed.vcf.gz" -F "input-files=@chr11-REFfixed.vcf.gz" -F "input-files=@chr12-REFfixed.vcf.gz" -F "input-files=@chr13-REFfixed.vcf.gz" -F "input-files=@chr14-REFfixed.vcf.gz" -F "input-files=@chr15-REFfixed.vcf.gz" -F "input-files=@chr16-REFfixed.vcf.gz" -F "input-files=@chr17-REFfixed.vcf.gz" -F "input-files=@chr18-REFfixed.vcf.gz" -F "input-files=@chr19-REFfixed.vcf.gz" -F "input-files=@chr20-REFfixed.vcf.gz" -F "input-files=@chr21-REFfixed.vcf.gz" -F "input-files=@chr22-REFfixed.vcf.gz" \
-    -F "input-build=hg38" -F "input-mode=imputation" -F "input-population=mixed" -F "input-refpanel=apps@topmed-r2@1.0.0" -F "input-phasing=eagle"\
-    https://imputation.biodatacatalyst.nhlbi.nih.gov/api/v2/jobs/submit/imputationserver@1.3.3 
-  
+      ## Reference : HRC
+      curl https://imputationserver.sph.umich.edu/api/v2/jobs/submit/minimac4 -H "X-Auth-Token: ${michighan}" \
+          -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr2-REFfixed.vcf.gz" -F "files=@chr3-REFfixed.vcf.gz" -F "files=@chr4-REFfixed.vcf.gz" -F "files=@chr5-REFfixed.vcf.gz" -F "files=@chr6-REFfixed.vcf.gz" -F "files=@chr7-REFfixed.vcf.gz" -F "files=@chr8-REFfixed.vcf.gz" -F "files=@chr9-REFfixed.vcf.gz" -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr11-REFfixed.vcf.gz" -F "files=@chr12-REFfixed.vcf.gz" -F "files=@chr13-REFfixed.vcf.gz" -F "files=@chr14-REFfixed.vcf.gz" -F "files=@chr15-REFfixed.vcf.gz" -F "files=@chr16-REFfixed.vcf.gz" -F "files=@chr17-REFfixed.vcf.gz" -F "files=@chr18-REFfixed.vcf.gz" -F "files=@chr19-REFfixed.vcf.gz" -F "files=@chr20-REFfixed.vcf.gz" -F "files=@chr21-REFfixed.vcf.gz" -F "files=@chr22-REFfixed.vcf.gz" \
+          -F "refpanel=apps@hrc-r1.1" -F "phasing=eagle" -F "mode=imputation" -F "population=mixed" -F "build=hg38"
+      '''}}
 
-  ## -- Michighan Imputation :
-  ## Reference : 1000G phase 3
-  curl https://imputationserver.sph.umich.edu/api/v2/jobs/submit/minimac4 -H "X-Auth-Token: !{michighan}" \
-    -F "files=@chr1-REFfixed.vcf.gz" -F "files=@chr2-REFfixed.vcf.gz" -F "files=@chr3-REFfixed.vcf.gz" -F "files=@chr4-REFfixed.vcf.gz" -F "files=@chr5-REFfixed.vcf.gz" -F "files=@chr6-REFfixed.vcf.gz" -F "files=@chr7-REFfixed.vcf.gz" -F "files=@chr8-REFfixed.vcf.gz" -F "files=@chr9-REFfixed.vcf.gz" -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr11-REFfixed.vcf.gz" -F "files=@chr12-REFfixed.vcf.gz" -F "files=@chr13-REFfixed.vcf.gz" -F "files=@chr14-REFfixed.vcf.gz" -F "files=@chr15-REFfixed.vcf.gz" -F "files=@chr16-REFfixed.vcf.gz" -F "files=@chr17-REFfixed.vcf.gz" -F "files=@chr18-REFfixed.vcf.gz" -F "files=@chr19-REFfixed.vcf.gz" -F "files=@chr20-REFfixed.vcf.gz" -F "files=@chr21-REFfixed.vcf.gz" -F "files=@chr22-REFfixed.vcf.gz" \
-    -F "refpanel=apps@1000g-phase-3-v5" -F "phasing=eagle" -F "mode=imputation" -F "population=mixed" -F "build=hg38"
-  
-  ## Reference : HRC
-  curl https://imputationserver.sph.umich.edu/api/v2/jobs/submit/minimac4 -H "X-Auth-Token: !{michighan}" \
-    -F "files=@chr1-REFfixed.vcf.gz" -F "files=@chr2-REFfixed.vcf.gz" -F "files=@chr3-REFfixed.vcf.gz" -F "files=@chr4-REFfixed.vcf.gz" -F "files=@chr5-REFfixed.vcf.gz" -F "files=@chr6-REFfixed.vcf.gz" -F "files=@chr7-REFfixed.vcf.gz" -F "files=@chr8-REFfixed.vcf.gz" -F "files=@chr9-REFfixed.vcf.gz" -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr11-REFfixed.vcf.gz" -F "files=@chr12-REFfixed.vcf.gz" -F "files=@chr13-REFfixed.vcf.gz" -F "files=@chr14-REFfixed.vcf.gz" -F "files=@chr15-REFfixed.vcf.gz" -F "files=@chr16-REFfixed.vcf.gz" -F "files=@chr17-REFfixed.vcf.gz" -F "files=@chr18-REFfixed.vcf.gz" -F "files=@chr19-REFfixed.vcf.gz" -F "files=@chr20-REFfixed.vcf.gz" -F "files=@chr21-REFfixed.vcf.gz" -F "files=@chr22-REFfixed.vcf.gz" \
-    -F "refpanel=apps@hrc-r1.1" -F "phasing=eagle" -F "mode=imputation" -F "population=mixed" -F "build=hg38"
-  '''}}
+  if (params.token_TOPMed){
+    process TOPMed_Imputation{
+      input:
+      file data from Channel.fromPath(params.token_TOPMed).collect()
+      file data from FilterFinal2.collect()
+      
+      when:
+      !params.token_TOPMed!=null
+
+      shell:
+      '''
+      tOPMed=$(cat !{params.token_TOPMed})
+
+      ## -- TOPMed Imputation :
+      curl -H "X-Auth-Token: ${tOPMed}" \
+          -F "input-files=@chr1-REFfixed.vcf.gz" -F "input-files=@chr2-REFfixed.vcf.gz" -F "input-files=@chr3-REFfixed.vcf.gz" -F "input-files=@chr4-REFfixed.vcf.gz" -F "input-files=@chr5-REFfixed.vcf.gz" -F "input-files=@chr6-REFfixed.vcf.gz" -F "input-files=@chr7-REFfixed.vcf.gz" -F "input-files=@chr8-REFfixed.vcf.gz" -F "input-files=@chr9-REFfixed.vcf.gz" -F "input-files=@chr10-REFfixed.vcf.gz" -F "input-files=@chr11-REFfixed.vcf.gz" -F "input-files=@chr12-REFfixed.vcf.gz" -F "input-files=@chr13-REFfixed.vcf.gz" -F "input-files=@chr14-REFfixed.vcf.gz" -F "input-files=@chr15-REFfixed.vcf.gz" -F "input-files=@chr16-REFfixed.vcf.gz" -F "input-files=@chr17-REFfixed.vcf.gz" -F "input-files=@chr18-REFfixed.vcf.gz" -F "input-files=@chr19-REFfixed.vcf.gz" -F "input-files=@chr20-REFfixed.vcf.gz" -F "input-files=@chr21-REFfixed.vcf.gz" -F "input-files=@chr22-REFfixed.vcf.gz" \
+          -F "input-build=hg38" -F "input-mode=imputation" -F "input-population=mixed" -F "input-refpanel=apps@topmed-r2@1.0.0" -F "input-phasing=eagle"\
+          https://imputation.biodatacatalyst.nhlbi.nih.gov/api/v2/jobs/submit/imputationserver@1.3.3 
+      '''}}}
