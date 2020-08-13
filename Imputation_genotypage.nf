@@ -462,9 +462,6 @@ if(params.cloud=="off") {
     ## -- 21 : Phasing
     bcftools index -f chr${chr}-REFfixed.vcf.gz
     eagle --vcfRef !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom chr${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
-    
-    #?????????????????
-    #sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
 
     ## -- 22 : Imputation
     minimac4 --refHaps !{params.M3VCFref}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr chr${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
@@ -472,7 +469,7 @@ if(params.cloud=="off") {
     '''}
   process Concatenation{
     publishDir params.output+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
-    cpus=6
+    cpus=16
 
     input:
     val chromosomes from 1..22
@@ -488,7 +485,8 @@ if(params.cloud=="off") {
     ls chr_${chr}_chunk*.imputed.dose.vcf.gz> chr_${chr}_imp_res.txt
 
     ## -- 23 : Concatenation
-    bcftools concat --threads 6 -f chr_${chr}_imp_res.txt -Ou | bcftools sort --temp-dir chr_${chr} -Ou | bgzip -c > chr_${chr}_combined.vcf.gz 
+    #bcftools concat --threads 16 -f chr_${chr}_imp_res.txt -Ou | bcftools sort --temp-dir chr_${chr} -Ou | bgzip -c > chr_${chr}_combined.vcf.gz
+    bcftools concat --threads 16 -f chr_${chr}_imp_res.txt -Ou  | bgzip -c > chr_${chr}_combined.vcf.gz
     '''}
   process QC3_sh{
     input:
@@ -522,8 +520,7 @@ if(params.cloud=="off") {
   '''
   pop=!{population}
   Rscript !{baseDir}/bin/postImputation_QC_plots.r ${pop} 0.3
-  '''
-  }}
+  '''}}
 
 //////////////////////////////////////////////////
 if(params.cloud=="on") {
@@ -545,7 +542,6 @@ if(params.cloud=="on") {
   process Cloud_Imputation{
   input:
   file data from FilterFinal3.collect()
-  //file data from Channel.fromPath("/data/gep/MR_Signatures/work/Boris/protocol_min/script/vcf/*").collect()
   val michighan from Michighan
   val tOPMed from TOPMed
 
