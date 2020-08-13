@@ -67,6 +67,7 @@ You can avoid installing all the external software of the main scritp by only in
 |-----------|---------------|-----------------|
 | --target  | my_target | Pattern of the target dataset which do the link with the file .bed/.bim./fam for plink |
 | --input   | user/main_data/ | The path of the main directory where we can find 2 directory : my_target/ + files/ |
+| --output  | user/my_result/ | The path of the main directory where you want to place your results |
 
   * #### Optional
 | Name      | Default value | Description     |
@@ -84,8 +85,11 @@ You can avoid installing all the external software of the main scritp by only in
 | --VCFref  |          my/directory/ref/vcf/ | Directory to use as VCF reference |
 | --BCFref  |          my/directory/ref/bcf/ | Directory to use as BCF reference |
 | --M3VCFref|          my/directory/ref/m3vcf/ | Directory to use as M3VCF reference |
-| --out     |          my/directory/result/ | Directory to use for results |
-| --hg18    |         [T-F] | Option to convert data from hg18 to HG38 version of the genome. Standard value is F |
+| --conversion|         hg38/hg18/hg19 | Option to convert data from hg18 to HG38 version of the genome. Standard value is hg38 |
+| --cloud   |         hg38/hg18/hg19 | Option to convert data from hg18 to HG38 version of the genome. Standard value is hg38 |
+| --token_Michighan |  path/to/my_token.txt | Option to convert data from hg18 to HG38 version of the genome. Standard value is hg38 |
+| --token_TOPMed    |  path/to/my_token.txt | Option to convert data from hg18 to HG38 version of the genome. Standard value is hg38 |
+| --QC_cloud|         my/directory/donwload_imputation_server | Option to convert data from hg18 to HG38 version of the genome. Standard value is hg38 |
 
 
   * #### Flags
@@ -115,8 +119,21 @@ _ data/files/ : with all the dependencies.
 3. Run the imputation pipeline.
 
   ```
-  nextflow run IARCbioinfo/Imputation.nf --target my_target --input /data/ -r v1.0 -profile singularity 
+  nextflow run IARCbioinfo/Imputation.nf --target my_target --input /data/ --output /results/ -r v1.0 -profile singularity 
   ```
+
+4. If you want to run the imputation in one of the server (Michigan and/or TOPMed Imputation), you need you write your token acces in a file and to give it in argument. For example :
+
+  ```
+  nextflow run IARCbioinfo/Imputation.nf --target my_target --input /data/ --output /results/ --cloud on --token_Michighan /folder/my_token_Michighan.txt --token_TOPMed /folder/my_token_TOPMed.txt -r v1.0 -profile singularity 
+  ```
+
+  Once your imputation data is downloaded, you can run the end of the QC analysis :
+  
+  ```
+  nextflow run IARCbioinfo/Imputation.nf --target my_target --input /data/ --output /results/ --QC_cloud /downloaded_imputation_server_file/ -r v1.0 -profile singularity 
+  ```
+
 
 ## Output
   | Type      | Description     |
@@ -135,9 +152,8 @@ _ data/files/ : with all the dependencies.
 
   | Name      | Email | Description     |
   |-----------|---------------|-----------------|
-  | contrib1*    |            xx | Developer to contact for support (link to specific gitter chatroom) |
-  | contrib2    |            xx | Developer |
-  | contrib3    |            xx | Tester |
+  | Gabriel Aurélie   | gabriela@students.iarc.fr | Developer to contact for support |
+  | Lipinski Boris    | LipinskiB@students.iarc.fr / boris.lipinski@etu.univ-lyon1.fr | Developer to contact for support  |
 
 ## References (optional)
 
