@@ -174,16 +174,16 @@ process Admixture{
 
 
   ## -- 2 : Extract the genotypes associated to these common SNPs + merge of the dataset
-  plink --bfile !{params.origin} --extract ref_common_SNPs.txt --make-bed --out ref1
+  plink --bfile !{params.origin} --extract target_common_SNPs.txt --make-bed --out ref1
   plink --bfile target --extract target_common_SNPs.txt --make-bed --out target1
-  plink --bfile target1 --update-map change_ID.txt --update-name --make-bed --out target2
-  plink --bfile target2 --bmerge ref1 --allow-no-sex --make-bed --out merge1
+  #plink --bfile target1 --update-map change_ID.txt --update-name --make-bed --out target2
+  plink --bfile target1 --bmerge ref1 --allow-no-sex --make-bed --out merge1
 
   if [ -e merge1-merge.missnp ]
   then
     plink --bfile ref1 --exclude merge1-merge.missnp --make-bed --out ref2
-    plink --bfile target2 --exclude merge1-merge.missnp --make-bed --out target3
-    plink --bfile ref2 --bmerge target3 --allow-no-sex --make-bed --out merge
+    plink --bfile target1 --exclude merge1-merge.missnp --make-bed --out target2
+    plink --bfile ref2 --bmerge target2 --allow-no-sex --make-bed --out merge
   else
     mv merge1.fam merge.fam 
     mv merge1.bed merge.bed 
