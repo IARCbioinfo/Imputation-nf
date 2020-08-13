@@ -19,7 +19,7 @@ params.help = null
 
 log.info ""
 log.info "--------------------------------------------------------"
-log.info "  Imputation_genotypage 1.0 : Pipeline for the imputation of a target dataset against a reference "
+log.info "  Imputation 1.0 : Pipeline for the imputation of a target dataset against a reference "
 log.info "--------------------------------------------------------"
 log.info "Copyright (C) IARC/WHO"
 log.info "This program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE"
