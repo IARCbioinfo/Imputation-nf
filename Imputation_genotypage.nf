@@ -100,6 +100,10 @@ params.M3VCFref = params.ref+"m3vcf/"
 params.conversion = "hg38"
 params.chain = params.folder
 
+params.cloud = "off"
+params.token_Michighan = null //"/data/gep/MR_Signatures/work/Boris/protocol_min/data/token_Michighan.txt"
+params.token_TOPMed = null //"/data/gep/MR_Signatures/work/Boris/protocol_min/data/token_TOPMed.txt"
+
 // -- Pipeline :
 process UpdateHG38{ 
   input:
@@ -369,7 +373,7 @@ process Filtering4{
   output:
   file ('*-REFfixed.vcf.gz') into FilterFinal
   file ('*-REFfixed.vcf.gz') into FilterFinal2
-  //file ('*-REFfixed.vcf.gz') into FilterFinal3
+  file ('*-REFfixed.vcf.gz') into FilterFinal3
 
   shell:
   '''
@@ -388,120 +392,124 @@ process Filtering4{
   bcftools norm --check-ref ws -f !{params.fasta} chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
   python2 checkVCF.py -r !{params.fasta} -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
   '''}
-process Make_Chunks{
-  input:
-  val chromosome from 1..22
-  file data from FilterFinal.collect()
-  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
 
-  output:
-  env chunks into NbChunk
-  env chunks into NbChunk2
-  tuple env(chunks), val(chromosome) into InfoChrChunk
-  file ('*.txt') into ChunkSplit
 
-  shell:
-  '''
-  ## -- 19 : Create Chunks
-  chr=!{chromosome}
-  bcftools index -f chr${chr}-REFfixed.vcf.gz
-  bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf| bgzip -c > isec_chr_${chr}.vcf.gz
-  Rscript !{baseDir}/bin/create_chunks.r ${chr}
-  chunks=$(wc -l chunk_split_chr${chr}.txt | awk '{print $1}')
-  '''}
-process Make_Multiprocessing{
-  input:
-  val merge from InfoChrChunk.toList()
+//////////////////////////////////////////////////
+if(params.cloud=="off") {
+  process Make_Chunks{
+    input:
+    val chromosome from 1..22
+    file data from FilterFinal.collect()
+    file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
 
-  output:
-  file 'multiprocess.txt' into NbChr
-  file 'multiprocess.txt' into NbChr2
+    output:
+    env chunks into NbChunk
+    env chunks into NbChunk2
+    tuple env(chunks), val(chromosome) into InfoChrChunk
+    file ('*.txt') into ChunkSplit
 
-  shell:
-  '''
-  #!/usr/bin/env python3
-  ## -- 20 : Preparation of multiprocessing for imputation
+    shell:
+    '''
+    ## -- 19 : Create Chunks
+    chr=!{chromosome}
+    bcftools index -f chr${chr}-REFfixed.vcf.gz
+    bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf| bgzip -c > isec_chr_${chr}.vcf.gz
+    Rscript !{baseDir}/bin/create_chunks.r ${chr}
+    chunks=$(wc -l chunk_split_chr${chr}.txt | awk '{print $1}')
+    '''}
+  process Make_Multiprocessing{
+    input:
+    val merge from InfoChrChunk.toList()
 
-  file=open('multiprocess.txt','w')
-  liste=!{merge}
-  for tuples in liste:
-     for i in range(0,tuples[0]):
-        file.write(str(tuples[1]) + '\\n')
+    output:
+    file 'multiprocess.txt' into NbChr
+    file 'multiprocess.txt' into NbChr2
 
-  file.close()
-  '''}
-process Imputation{
-  input:
-  val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
-  val chromosomes from NbChr.splitText()
+    shell:
+    '''
+    #!/usr/bin/env python3
+    ## -- 20 : Preparation of multiprocessing for imputation
 
-  file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
-  file data from FilterFinal2.collect()
-  file data from ChunkSplit.collect()
+    file=open('multiprocess.txt','w')
+    liste=!{merge}
+    for tuples in liste:
+      for i in range(0,tuples[0]):
+          file.write(str(tuples[1]) + '\\n')
 
-  output:
-  file '*imputed.dose.vcf.gz*' into FileVCF
+    file.close()
+    '''}
+  process Imputation{
+    input:
+    val chunks from NbChunk.map{1.."$it".toInteger()}.flatten()
+    val chromosomes from NbChr.splitText()
 
-  shell:
-  '''
-  chr=!{chromosomes}
-  chunk=!{chunks}
-  echo "chr: ${chr} n_chunks: ${chunk}"
-  cpu=1
-  start=$(awk '{print $1}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
-  end=$(awk '{print $2}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
+    file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
+    file data from FilterFinal2.collect()
+    file data from ChunkSplit.collect()
 
-  ## -- 21 : Phasing
-  bcftools index -f chr${chr}-REFfixed.vcf.gz
-  eagle --vcfRef !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom chr${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
-  
-  #?????????????????
-  #sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
+    output:
+    file '*imputed.dose.vcf.gz*' into FileVCF
 
-  ## -- 22 : Imputation
-  minimac4 --refHaps !{params.M3VCFref}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr chr${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
-  bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
-  '''}
-process Concatenation{
-  publishDir params.output+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
-  cpus=6
+    shell:
+    '''
+    chr=!{chromosomes}
+    chunk=!{chunks}
+    echo "chr: ${chr} n_chunks: ${chunk}"
+    cpu=1
+    start=$(awk '{print $1}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
+    end=$(awk '{print $2}' <(awk 'NR == c' c="${chunk}" chunk_split_chr${chr}.txt))
 
-  input:
-  val chromosomes from 1..22
-  file data from FileVCF.collect()
+    ## -- 21 : Phasing
+    bcftools index -f chr${chr}-REFfixed.vcf.gz
+    eagle --vcfRef !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf --vcfTarget chr${chr}-REFfixed.vcf.gz --vcfOutFormat v --geneticMapFile /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz --outPrefix chr_${chr}_chunk${chunk}.phased --bpStart ${start} --bpEnd ${end} --bpFlanking 5000000 --chrom chr${chr} --numThreads ${cpu}  > chr_${chr}_chunk${chunk}_phasing.logphase
+    
+    #?????????????????
+    #sed -i "s/chr${chr}/${chr}/g" chr_${chr}_chunk${chunk}.phased.vcf
 
-  output:
-  file '*_combined.vcf.gz' into Imputation
+    ## -- 22 : Imputation
+    minimac4 --refHaps !{params.M3VCFref}ALL.chr${chr}.m3vcf.gz --haps chr_${chr}_chunk${chunk}.phased.vcf --prefix chr_${chr}_chunk${chunk}.imputed --allTypedSites --format GT,DS,GP --cpus ${cpu} --chr chr${chr} --start $start --end $end --window 500000 > chr_${chr}_chunk${chunk}.logimpute
+    bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
+    '''}
+  process Concatenation{
+    publishDir params.output+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
+    cpus=6
 
-  shell:
-  '''
-  chr=!{chromosomes}
-  mkdir chr_${chr}
-  ls chr_${chr}_chunk*.imputed.dose.vcf.gz> chr_${chr}_imp_res.txt
+    input:
+    val chromosomes from 1..22
+    file data from FileVCF.collect()
 
-  ## -- 23 : Concatenation
-  bcftools concat --threads 6 -f chr_${chr}_imp_res.txt -Ou | bcftools sort --temp-dir chr_${chr} -Ou | bgzip -c > chr_${chr}_combined.vcf.gz 
-  '''}
-process QC3_sh{
-  input:
-  val population from('ALL','CEU','YRI','CHB_JPT')
-  each chromosome from 1..22
-  file data from Imputation.collect()
-  file data from Admixture2.collect()
-  file data from Channel.fromPath(params.BCFref+'/*').collect()
+    output:
+    file '*_combined.vcf.gz' into Imputation
 
-  output:
-  file '*.{txt,frq}' into PostImputation_QC_sh_result
+    shell:
+    '''
+    chr=!{chromosomes}
+    mkdir chr_${chr}
+    ls chr_${chr}_chunk*.imputed.dose.vcf.gz> chr_${chr}_imp_res.txt
 
-  shell:
-  '''
-  pop=!{population}
-  chr=!{chromosome}
+    ## -- 23 : Concatenation
+    bcftools concat --threads 6 -f chr_${chr}_imp_res.txt -Ou | bcftools sort --temp-dir chr_${chr} -Ou | bgzip -c > chr_${chr}_combined.vcf.gz 
+    '''}
+  process QC3_sh{
+    input:
+    val population from('ALL','CEU','YRI','CHB_JPT')
+    each chromosome from 1..22
+    file data from Imputation.collect()
+    file data from Admixture2.collect()
+    file data from Channel.fromPath(params.BCFref+'/*').collect()
 
-  ## -- 24 : QC3
-  bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
-  '''}
-process QC3_R{
+    output:
+    file '*.{txt,frq}' into PostImputation_QC_sh_result
+
+    shell:
+    '''
+    pop=!{population}
+    chr=!{chromosome}
+
+    ## -- 24 : QC3
+    bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
+    '''}
+  process QC3_R{
   publishDir params.output+'result/'+params.target+'/QC3/', mode: 'copy'
   input:
   val population from('ALL','CEU','YRI','CHB_JPT')
@@ -514,4 +522,50 @@ process QC3_R{
   '''
   pop=!{population}
   Rscript !{baseDir}/bin/postImputation_QC_plots.r ${pop} 0.3
-  '''}
+  '''
+  }}
+
+//////////////////////////////////////////////////
+if(params.cloud=="on") {
+  process Cloud_Token{
+    input:
+    file data from Channel.fromPath(params.token_Michighan).collect()
+    file data from Channel.fromPath(params.token_TOPMed).collect()
+    
+    output:
+    env michighan into Michighan
+    env tOPMed into TOPMed
+
+    shell:
+    '''
+    michighan=$(cat !{params.token_Michighan})
+    tOPMed=$(cat !{params.token_TOPMed})
+    '''}
+
+  process Cloud_Imputation{
+  input:
+  file data from FilterFinal3.collect()
+  //file data from Channel.fromPath("/data/gep/MR_Signatures/work/Boris/protocol_min/script/vcf/*").collect()
+  val michighan from Michighan
+  val tOPMed from TOPMed
+
+  shell:
+  '''
+  ## -- TOPMed Imputation :
+  curl -H "X-Auth-Token: !{tOPMed}" \
+    -F "input-files=@chr1-REFfixed.vcf.gz" -F "input-files=@chr2-REFfixed.vcf.gz" -F "input-files=@chr3-REFfixed.vcf.gz" -F "input-files=@chr4-REFfixed.vcf.gz" -F "input-files=@chr5-REFfixed.vcf.gz" -F "input-files=@chr6-REFfixed.vcf.gz" -F "input-files=@chr7-REFfixed.vcf.gz" -F "input-files=@chr8-REFfixed.vcf.gz" -F "input-files=@chr9-REFfixed.vcf.gz" -F "input-files=@chr10-REFfixed.vcf.gz" -F "input-files=@chr11-REFfixed.vcf.gz" -F "input-files=@chr12-REFfixed.vcf.gz" -F "input-files=@chr13-REFfixed.vcf.gz" -F "input-files=@chr14-REFfixed.vcf.gz" -F "input-files=@chr15-REFfixed.vcf.gz" -F "input-files=@chr16-REFfixed.vcf.gz" -F "input-files=@chr17-REFfixed.vcf.gz" -F "input-files=@chr18-REFfixed.vcf.gz" -F "input-files=@chr19-REFfixed.vcf.gz" -F "input-files=@chr20-REFfixed.vcf.gz" -F "input-files=@chr21-REFfixed.vcf.gz" -F "input-files=@chr22-REFfixed.vcf.gz" \
+    -F "input-build=hg38" -F "input-mode=imputation" -F "input-population=mixed" -F "input-refpanel=apps@topmed-r2@1.0.0" -F "input-phasing=eagle"\
+    https://imputation.biodatacatalyst.nhlbi.nih.gov/api/v2/jobs/submit/imputationserver@1.3.3 
+  
+
+  ## -- Michighan Imputation :
+  ## Reference : 1000G phase 3
+  curl https://imputationserver.sph.umich.edu/api/v2/jobs/submit/minimac4 -H "X-Auth-Token: !{michighan}" \
+    -F "files=@chr1-REFfixed.vcf.gz" -F "files=@chr2-REFfixed.vcf.gz" -F "files=@chr3-REFfixed.vcf.gz" -F "files=@chr4-REFfixed.vcf.gz" -F "files=@chr5-REFfixed.vcf.gz" -F "files=@chr6-REFfixed.vcf.gz" -F "files=@chr7-REFfixed.vcf.gz" -F "files=@chr8-REFfixed.vcf.gz" -F "files=@chr9-REFfixed.vcf.gz" -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr11-REFfixed.vcf.gz" -F "files=@chr12-REFfixed.vcf.gz" -F "files=@chr13-REFfixed.vcf.gz" -F "files=@chr14-REFfixed.vcf.gz" -F "files=@chr15-REFfixed.vcf.gz" -F "files=@chr16-REFfixed.vcf.gz" -F "files=@chr17-REFfixed.vcf.gz" -F "files=@chr18-REFfixed.vcf.gz" -F "files=@chr19-REFfixed.vcf.gz" -F "files=@chr20-REFfixed.vcf.gz" -F "files=@chr21-REFfixed.vcf.gz" -F "files=@chr22-REFfixed.vcf.gz" \
+    -F "refpanel=apps@1000g-phase-3-v5" -F "phasing=eagle" -F "mode=imputation" -F "population=mixed" -F "build=hg38"
+  
+  ## Reference : HRC
+  curl https://imputationserver.sph.umich.edu/api/v2/jobs/submit/minimac4 -H "X-Auth-Token: !{michighan}" \
+    -F "files=@chr1-REFfixed.vcf.gz" -F "files=@chr2-REFfixed.vcf.gz" -F "files=@chr3-REFfixed.vcf.gz" -F "files=@chr4-REFfixed.vcf.gz" -F "files=@chr5-REFfixed.vcf.gz" -F "files=@chr6-REFfixed.vcf.gz" -F "files=@chr7-REFfixed.vcf.gz" -F "files=@chr8-REFfixed.vcf.gz" -F "files=@chr9-REFfixed.vcf.gz" -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr11-REFfixed.vcf.gz" -F "files=@chr12-REFfixed.vcf.gz" -F "files=@chr13-REFfixed.vcf.gz" -F "files=@chr14-REFfixed.vcf.gz" -F "files=@chr15-REFfixed.vcf.gz" -F "files=@chr16-REFfixed.vcf.gz" -F "files=@chr17-REFfixed.vcf.gz" -F "files=@chr18-REFfixed.vcf.gz" -F "files=@chr19-REFfixed.vcf.gz" -F "files=@chr20-REFfixed.vcf.gz" -F "files=@chr21-REFfixed.vcf.gz" -F "files=@chr22-REFfixed.vcf.gz" \
+    -F "refpanel=apps@hrc-r1.1" -F "phasing=eagle" -F "mode=imputation" -F "population=mixed" -F "build=hg38"
+  '''}}
