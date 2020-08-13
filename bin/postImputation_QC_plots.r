@@ -109,110 +109,59 @@ dev.off()
 fwrite(merge_SNPs_data,paste0(unlist(strsplit(pop,"_"))[2],"_allINFO",INFO_thr,"_v2.txt"),row.names=F,quote=F,col.names =T)
 
 
-# text_size=8
-# legend_size=2
-# 
-# # rand1 <- sample(1:nrow(merge_SNPs_data), 500000, replace = FALSE)
-# # temp1 <- merge_SNPs_data[rand1,]
-# temp1 <- merge_SNPs_data
-# temp1$AF_GROUP <- factor(temp1$AF_GROUP, levels = c("1", "2","3"), labels = c("MAF > 5%", "MAF 0.5-5%", "MAF < 0.5%"))
-# 
-# # Plot INFO-value distributions
-# p1 = ggplot(temp1, aes(x=INFO, color=AF_GROUP, fill=AF_GROUP)) + 
-#   geom_histogram(aes(y=..density..), alpha=0.4,position="identity",bins = 100) + 
-#   geom_density(alpha=.2) +
-#   labs(title=paste0("Distribution of R2"),x="R2", y = "Density") +
-#   guides(shape = guide_legend(override.aes = list(size = legend_size)),
-#          color = guide_legend(override.aes = list(size = legend_size))) +
-#   scale_color_viridis(discrete=TRUE) +
-#   scale_fill_viridis(discrete=TRUE) +
-#   theme(legend.title = element_text(size = text_size), 
-#         legend.text  = element_text(size = text_size),
-#         legend.key.size = unit(0.3, "lines"),legend.position = c(0.5, 0.5))
-# 
-# # Plot AF of panel vs. imputed variants
-# p2 = ggplot(merge_SNPs_data,aes(x=AF_ref,y=AF_target)) + stat_binhex(bins = 500) +
-#   labs(title=paste0("Imputed AF vs. reference panel AF"),x="AF in ref data", y = "AF in target data") +
-#   guides(shape = guide_legend(override.aes = list(size = legend_size)),
-#          color = guide_legend(override.aes = list(size = legend_size))) +
-#   scale_fill_viridis() +
-#   theme(legend.title = element_text(size = text_size), 
-#         legend.text  = element_text(size = text_size),
-#         legend.key.size = unit(0.5, "lines"),legend.position = c(0.85, 0.3))
-# 
-# # Imputed data AF histogram for intersecting variants
-# p3 = ggplot(merge_SNPs_data, aes(x=AF_target)) + 
-#   geom_histogram(color="black", fill="white",bins=300)+
-#   labs(title=paste0("AF distribution of imputed variants"),x="Imputed AF", y = "Count")
-# 
-# merge_SNPs_data=merge_SNPs_data[order(merge_SNPs_data$CHR,merge_SNPs_data$POS),]
-# x_coords=sapply(13:22, function(chr){
-#   sub_chr=merge_SNPs_data[which(merge_SNPs_data$CHR==chr),]
-#   pos=sub_chr$POS[nrow(sub_chr)]
-#   return(which(merge_SNPs_data$POS==pos & merge_SNPs_data$CHR==chr))
-# })
-# df=data.frame(x=x_coords,y=rep(-0.55,length(x_coords)),xend=x_coords,yend=rep(0.55,length(x_coords)))
-# p4 = ggplot(merge_SNPs_data,aes(x=1:nrow(merge_SNPs_data),y=AF_target-AF_ref)) + stat_binhex(bins = 500) +
-#   labs(title=paste0("Absolute AF differences along the chromosome"),x="Chromosome position", y = "AF difference (imputed - panel)") +
-#   guides(shape = guide_legend(override.aes = list(size = legend_size)),
-#          color = guide_legend(override.aes = list(size = legend_size))) +
-#   scale_fill_viridis() +
-#   theme(legend.title = element_text(size = text_size), 
-#         legend.text  = element_text(size = text_size),
-#         legend.key.size = unit(0.5, "lines"),legend.position = c(0.85, 0.8)) + 
-#   geom_segment(aes(x = x, y = y, xend = xend , yend = yend),data=df) 
-# 
-# 
-# pdf(paste0(output_path,"AF_afterImputation",pop,"_R2thr_",INFO_thr,"_allCHR.pdf"))
-# grid.arrange(p1, p2, p3, p4, nrow = 2)
-# dev.off()
+text_size=8
+legend_size=2
+# rand1 <- sample(1:nrow(merge_SNPs_data), 500000, replace = FALSE)
+# temp1 <- merge_SNPs_data[rand1,]
+temp1 <- merge_SNPs_data
+temp1$AF_GROUP <- factor(temp1$AF_GROUP, levels = c("1", "2","3"), labels = c("MAF > 5%", "MAF 0.5-5%", "MAF < 0.5%"))
 
-# merge_SNPs_data=fread("/data/gep/MR_Signatures/work/gabriela/GIT_Rstudio_project/results/figures/imputation_QCs/CEU_allINFO.txt",header = T)
-# library(dplyr)
-# summary_mean=group_by(merge_SNPs_data, CHR) %>% summarise(mean=mean(INFO), sd=sd(INFO))
-# mean_bychunk=vector()
-# nb_snps_bychunk=vector()
-# mean_bychunk_infoHigh=vector()
-# nb_bychunk_infoHigh=vector()
-# for(chr in 1:22){
-#   chunks=read.table(paste0(imputation_path,"chr_",chr,"/chunk_split_chr",chr,".txt"))
-#   for(j in 1:nrow(chunks)){
-#     logimpute_info=system(paste0("grep \"variants overlap with Reference panel\" ",imputation_path,"chr_",chr,"/imputation/chr_",chr,"_chunk",j,".logimpute"),intern=T)
-#     nb_snps_bychunk=c(nb_snps_bychunk,as.numeric(unlist(strsplit(logimpute_info," "))[22]))
-#     mean_bychunk=c(mean_bychunk,mean(merge_SNPs_data$INFO[which(merge_SNPs_data$CHR==chr & (merge_SNPs_data$POS>=chunks[j,1] & merge_SNPs_data$POS<chunks[j,2]) )]))
-#     names(mean_bychunk)[length(mean_bychunk)]=paste0("chr_",chr,"_chunk_",j)
-#     mean_bychunk_infoHigh=c(mean_bychunk_infoHigh,mean(merge_SNPs_data$INFO[which(merge_SNPs_data$INFO>0.3 & merge_SNPs_data$CHR==chr & (merge_SNPs_data$POS>=chunks[j,1] & merge_SNPs_data$POS<chunks[j,2]) )]))
-#     nb_bychunk_infoHigh=c(nb_bychunk_infoHigh,length(merge_SNPs_data$INFO[which(merge_SNPs_data$INFO>0.3 & merge_SNPs_data$CHR==chr & (merge_SNPs_data$POS>=chunks[j,1] & merge_SNPs_data$POS<chunks[j,2]) )]))
-# 
-#   }
-# }
-# summary_mean_R2=data.frame(chunk=names(mean_bychunk),
-#                            mean_val=mean_bychunk,
-#                            mean_val_infoHigh=mean_bychunk_infoHigh,
-#                            nb_snps_infoHigh=nb_bychunk_infoHigh,
-#                            nb_snps=nb_snps_bychunk)
-# write.table(summary_mean_R2,paste0(output_path,unlist(strsplit(pop,"_"))[2],"_chunks_summary.txt"),row.names=F,quote=F,col.names =T)
-# pdf(paste0(output_path,pop,"_chunks_summary.pdf"))
-# plot(summary_mean_R2$mean_bychunk,summary_mean_R2$summary_mean_R2)
-# dev.off()
-# 
-# output_path=paste0(project_path,"results/figures/imputation_QCs_CEU/")
-# summary_mean_R2=read.table(paste0(output_path,unlist(strsplit("CEU","_"))[2],"_chunks_summary.txt"),header = T,stringsAsFactors = F)
-# summary_mean_R2$chr=sapply(summary_mean_R2$chunk,function(i) unlist(strsplit(i,"_"))[2])
-# for(chr in 13:22){
-#   summary_chr=summary_mean_R2[which(summary_mean_R2$chr==chr),]
-#   par(mfrow=c(1,2))
-#   plot(1:nrow(summary_chr),summary_chr$mean_val,main=paste0("chr_",chr),xlab = "chunks", ylab = "mean R2")
-#   plot(1:nrow(summary_chr),summary_chr$nb_snps,main=paste0("chr_",chr),xlab = "chunks", ylab = "nb SNPs")
-# }
-# 
-# output_path=paste0(project_path,"results/figures/imputation_QCs/")
-# summary_mean_R2_v1=read.table(paste0(output_path,unlist(strsplit("CEU","_"))[2],"_chunks_summary.txt"),header = T,stringsAsFactors = F)
-# summary_mean_R2_v1$chr=sapply(summary_mean_R2_v1$chunk,function(i) unlist(strsplit(i,"_"))[2])
-# comp_versions=merge(summary_mean_R2,summary_mean_R2_v1,by="chunk")
-# 
-# plot(comp_versions$mean_val.x,comp_versions$mean_val.y)
-# abline(a = 0,b=1)
-# plot(comp_versions$mean_val_infoHigh.x,comp_versions$mean_val_infoHigh.y)
-# abline(a = 0,b=1)
-# 
+# Plot INFO-value distributions
+p1 = ggplot(temp1, aes(x=INFO, color=AF_GROUP, fill=AF_GROUP)) + 
+  geom_histogram(aes(y=..density..), alpha=0.4,position="identity",bins = 100) + 
+  geom_density(alpha=.2) +
+  labs(title=paste0("Distribution of R2"),x="R2", y = "Density") +
+  guides(shape = guide_legend(override.aes = list(size = legend_size)),
+        color = guide_legend(override.aes = list(size = legend_size))) +
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  theme(legend.title = element_text(size = text_size), 
+        legend.text  = element_text(size = text_size),
+        legend.key.size = unit(0.3, "lines"),legend.position = c(0.5, 0.5))
+
+# Plot AF of panel vs. imputed variants
+p2 = ggplot(merge_SNPs_data,aes(x=AF_ref,y=AF_target)) + stat_binhex(bins = 500) +
+  labs(title=paste0("Imputed AF vs. reference panel AF"),x="AF in ref data", y = "AF in target data") +
+  guides(shape = guide_legend(override.aes = list(size = legend_size)),
+        color = guide_legend(override.aes = list(size = legend_size))) +
+  scale_fill_viridis() +
+  theme(legend.title = element_text(size = text_size), 
+        legend.text  = element_text(size = text_size),
+        legend.key.size = unit(0.5, "lines"),legend.position = c(0.85, 0.3))
+
+# Imputed data AF histogram for intersecting variants
+p3 = ggplot(merge_SNPs_data, aes(x=AF_target)) + 
+  geom_histogram(color="black", fill="white",bins=300)+
+  labs(title=paste0("AF distribution of imputed variants"),x="Imputed AF", y = "Count")
+
+merge_SNPs_data=merge_SNPs_data[order(merge_SNPs_data$CHR,merge_SNPs_data$POS),]
+x_coords=sapply(13:22, function(chr){
+  sub_chr=merge_SNPs_data[which(merge_SNPs_data$CHR==chr),]
+  pos=sub_chr$POS[nrow(sub_chr)]
+  return(which(merge_SNPs_data$POS==pos & merge_SNPs_data$CHR==chr))
+})
+df=data.frame(x=x_coords,y=rep(-0.55,length(x_coords)),xend=x_coords,yend=rep(0.55,length(x_coords)))
+p4 = ggplot(merge_SNPs_data,aes(x=1:nrow(merge_SNPs_data),y=AF_target-AF_ref)) + stat_binhex(bins = 500) +
+  labs(title=paste0("Absolute AF differences along the chromosome"),x="Chromosome position", y = "AF difference (imputed - panel)") +
+  guides(shape = guide_legend(override.aes = list(size = legend_size)),
+        color = guide_legend(override.aes = list(size = legend_size))) +
+  scale_fill_viridis() +
+  theme(legend.title = element_text(size = text_size), 
+        legend.text  = element_text(size = text_size),
+        legend.key.size = unit(0.5, "lines"),legend.position = c(0.85, 0.8)) + 
+  geom_segment(aes(x = x, y = y, xend = xend , yend = yend),data=df) 
+
+
+pdf(paste0("AF_afterImputation",pop,"_R2thr_",INFO_thr,"_allCHR.pdf"))
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+dev.off()
