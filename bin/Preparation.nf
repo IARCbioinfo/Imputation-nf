@@ -30,10 +30,10 @@ log.info ""
 
 if (params.help) {
     log.info "--------------------------------------------------------"
-    log.info "  USAGE : nextflow run IARCbioinfo/Imputation-nf/bin/hg38.nf"
+    log.info "  USAGE : nextflow run IARCbioinfo/bin/Preparation.nf"
     log.info "--------------------------------------------------------"
     log.info ""
-    log.info "nextflow run IARCbioinfo/Imputation-nf/bin/hg38.nf"
+    log.info "nextflow run IARCbioinfo/bin/Preparation.nf"
     log.info ""
     log.info "Mandatory arguments:"
     log.info "--<OPTION>                      <TYPE>                      <DESCRIPTION>"
@@ -88,36 +88,7 @@ process BCF_ALL{
   chr=!{chromosome}
   (bcftools view --no-version -h ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | grep -v "^##contig=<ID=[GNh]" | sed 's/^##contig=<ID=MT/##contig=<ID=chrM/;s/^##contig=<ID=\\([0-9XY]\\)/##contig=<ID=chr\\1/'; bcftools view --no-version -H -c 2 ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | sed 's/^/chr/') | bcftools norm --no-version -Ou -m -any | bcftools norm --no-version -Ob -o ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf -d none -f GCA_000001405.15_GRCh38_no_alt_analysis_set.fna && bcftools index -f ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf 
   """}
-process BCF_X{
-  publishDir params.out+'files/ref/bcf/', mode: 'copy'
 
-  input:
-  file data from VCF_X.collect()
-  val chromosome from "X"
-
-  output:
-  file '*X*' into Bcf_X
-
-  shell:
-  """
-  chr=!{chromosome}
-  (bcftools view --no-version -h ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | grep -v "^##contig=<ID=[GNh]" | sed 's/^##contig=<ID=MT/##contig=<ID=chrM/;s/^##contig=<ID=\\([0-9XY]\\)/##contig=<ID=chr\\1/'; bcftools view --no-version -H -c 2 ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | sed 's/^/chr/') | bcftools norm --no-version -Ou -m -any | bcftools norm --no-version -Ob -o ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf -d none -f GCA_000001405.15_GRCh38_no_alt_analysis_set.fna && bcftools index -f ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf 
-  """}
-process BCF_Y{
-  publishDir params.out+'files/ref/bcf/', mode: 'copy'
-
-  input:
-  file data from VCF_Y.collect()
-  val chromosome from "Y"
-
-  output:
-  file '*Y*' into Bcf_Y
-
-  shell:
-  """
-  chr=!{chromosome}
-  (bcftools view --no-version -h ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | grep -v "^##contig=<ID=[GNh]" | sed 's/^##contig=<ID=MT/##contig=<ID=chrM/;s/^##contig=<ID=\\([0-9XY]\\)/##contig=<ID=chr\\1/'; bcftools view --no-version -H -c 2 ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | sed 's/^/chr/') | bcftools norm --no-version -Ou -m -any | bcftools norm --no-version -Ob -o ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf -d none -f GCA_000001405.15_GRCh38_no_alt_analysis_set.fna && bcftools index -f ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf 
-  """}
 
 process Legend_ALL{
   input:
@@ -197,6 +168,36 @@ process M3VCF_ALL{
   Minimac3 --cpus 4 --refHaps ALL.chr\${CHR}_GRCh38.bcf --processReference --prefix ALL.chr\${CHR} --chr chr\${CHR}
   """}
 /*
+process BCF_X{
+  publishDir params.out+'files/ref/bcf/', mode: 'copy'
+
+  input:
+  file data from VCF_X.collect()
+  val chromosome from "X"
+
+  output:
+  file '*X*' into Bcf_X
+
+  shell:
+  """
+  chr=!{chromosome}
+  (bcftools view --no-version -h ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | grep -v "^##contig=<ID=[GNh]" | sed 's/^##contig=<ID=MT/##contig=<ID=chrM/;s/^##contig=<ID=\\([0-9XY]\\)/##contig=<ID=chr\\1/'; bcftools view --no-version -H -c 2 ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | sed 's/^/chr/') | bcftools norm --no-version -Ou -m -any | bcftools norm --no-version -Ob -o ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf -d none -f GCA_000001405.15_GRCh38_no_alt_analysis_set.fna && bcftools index -f ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf 
+  """}
+process BCF_Y{
+  publishDir params.out+'files/ref/bcf/', mode: 'copy'
+
+  input:
+  file data from VCF_Y.collect()
+  val chromosome from "Y"
+
+  output:
+  file '*Y*' into Bcf_Y
+
+  shell:
+  """
+  chr=!{chromosome}
+  (bcftools view --no-version -h ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | grep -v "^##contig=<ID=[GNh]" | sed 's/^##contig=<ID=MT/##contig=<ID=chrM/;s/^##contig=<ID=\\([0-9XY]\\)/##contig=<ID=chr\\1/'; bcftools view --no-version -H -c 2 ALL.chr\${chr}_GRCh38.genotypes.20170504.vcf.gz | sed 's/^/chr/') | bcftools norm --no-version -Ou -m -any | bcftools norm --no-version -Ob -o ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf -d none -f GCA_000001405.15_GRCh38_no_alt_analysis_set.fna && bcftools index -f ALL.chr\${chr}_GRCh38.genotypes.20170504.bcf 
+  """}
 process M3VCF_X{
   validExitStatus 0,134,143,255
   publishDir params.out+'data/ref/m3vcf/', mode: 'copy'

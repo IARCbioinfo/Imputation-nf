@@ -107,7 +107,7 @@ Flags are special parameters without value.
   ```
   mkdir data
   cd data
-  nextflow run IARCbioinfo/bin/Preparation.nf
+  nextflow run IARCbioinfo/Imputation-nf/bin/Preparation.nf --out /data/
   ```
 
 2. Paste the bim/bed/fam plink target files in a directory, and the directory in your "data/" directory. You have to call the plink files and your directory with the same pattern, as the following exemple : data/target/target{.bed,.bim,.fam}. So now you have 2 directories in your "data/" repertory : 
