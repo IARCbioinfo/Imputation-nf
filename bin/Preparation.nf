@@ -150,7 +150,7 @@ process Concatenation{
 process M3VCF_ALL{
   validExitStatus 0,134,143,255
   publishDir params.out+'files/ref/m3vcf/', mode: 'copy'
-  cpus=4
+  cpus=16
 
   input:
   file data from Bcf_ALL.collect()
@@ -162,10 +162,10 @@ process M3VCF_ALL{
   shell:
   """
   CHR=!{chromosome}
-  bcftools index --tbi --threads 4 ALL.chr\${CHR}_GRCh38.genotypes.20170504.bcf -o ALL.chr\${CHR}_GRCh38.bcf.tbi
-  bcftools view --threads 4 -g ^miss ALL.chr\${CHR}_GRCh38.genotypes.20170504.bcf -Oz -o ALL.chr\${CHR}_GRCh38.bcf
-  bcftools index --threads 4 ALL.chr\${CHR}_GRCh38.bcf
-  Minimac3 --cpus 4 --refHaps ALL.chr\${CHR}_GRCh38.bcf --processReference --prefix ALL.chr\${CHR} --chr chr\${CHR}
+  bcftools index --csi --threads 16 ALL.chr\${CHR}_GRCh38.genotypes.20170504.bcf -o ALL.chr\${CHR}_GRCh38.bcf.csi
+  bcftools view --threads 16 -g ^miss ALL.chr\${CHR}_GRCh38.genotypes.20170504.bcf -Oz -o ALL.chr\${CHR}_GRCh38.bcf
+  bcftools index --threads 16 ALL.chr\${CHR}_GRCh38.bcf
+  Minimac3 --cpus 16 --refHaps ALL.chr\${CHR}_GRCh38.bcf --processReference --prefix ALL.chr\${CHR} --chr chr\${CHR}
   """}
 /*
 process BCF_X{
