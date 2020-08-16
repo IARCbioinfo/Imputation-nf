@@ -104,8 +104,8 @@ params.conversion = "hg38"
 params.chain = params.folder
 
 params.cloud = "off"
-params.token_Michighan = null //"/data/gep/MR_Signatures/work/Boris/protocol_min/data/token_Michighan.txt"
-params.token_TOPMed = null //"/data/gep/MR_Signatures/work/Boris/protocol_min/data/token_TOPMed.txt"
+params.token_Michighan = null
+params.token_TOPMed = null
 
 params.QC_cloud = null
 
@@ -151,8 +151,7 @@ if(params.QC_cloud==null){
     bash Run-plink-update.sh
     '''}
   process Admixture{
-    if(params.cloud=="on"){
-      publishDir params.output+'result/'+params.target+'/admixture/', mode: 'copy', pattern: 'out_pop_admixture/'}
+    publishDir params.output+'result/'+params.target+'/admixture/', mode: 'copy', pattern: 'out_pop_admixture/'
 
     input:
     file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
@@ -405,7 +404,7 @@ if(params.QC_cloud==null){
     python2 checkVCF.py -r ref.fa -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
     
     gunzip chr${chr}-REFfixed.vcf.gz
-    sed -i "s/^${chr}\t/^chr${chr}\t/g" chr${chr}-REFfixed.vcf
+    sed -i "s/^${chr}\t/chr${chr}\t/g" chr${chr}-REFfixed.vcf
     gzip chr${chr}-REFfixed.vcf
     '''}}
 //////////////////////////////////////////////////
