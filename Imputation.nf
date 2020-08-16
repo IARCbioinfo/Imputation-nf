@@ -393,13 +393,20 @@ if(params.QC_cloud==null){
     plink --bfile target5-updated-chr${chr} --extract NonAmbiguous${chr}.snplist.txt --output-chr chr26 --make-bed --out target6_chr${chr}
 
     ## -- 17 : Create VCF
-    plink --bfile target6_chr${chr} --output-chr chr26 --recode vcf --out target6_chr${chr}_vcf
-    bcftools sort target6_chr${chr}_vcf.vcf | bgzip -c  > chr${chr}.vcf.gz
+    plink --bfile target6_chr${chr} --recode vcf --out target6_chr${chr}_vcf 
+    bcftools sort target6_chr${chr}_vcf.vcf | bgzip -c > chr${chr}.vcf.gz 
+
+    sed "s/>chr${chr}/>${chr}/g" /data/gep/MR_Signatures/work/Boris/protocol_min/data/files/GRCh38_full_analysis_set_plus_decoy_hla.fa > ref.fa
+    samtools faidx ref.fa
 
     ## -- 18 : Check SNPs
-    python2 checkVCF.py -r !{params.fasta} -o after_check_${chr} chr${chr}.vcf.gz
-    bcftools norm --check-ref ws -f !{params.fasta} chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
-    python2 checkVCF.py -r !{params.fasta} -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
+    python2 checkVCF.py -r ref.fa -o after_check_${chr} chr${chr}.vcf.gz
+    bcftools norm --check-ref ws -f ref.fa chr${chr}.vcf.gz | bcftools view -m 2 -M 2 | bgzip -c > chr${chr}-REFfixed.vcf.gz
+    python2 checkVCF.py -r ref.fa -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
+    
+    gunzip chr${chr}-REFfixed.vcf.gz
+    sed -i "s/^${chr}\t/^chr${chr}\t/g" chr${chr}-REFfixed.vcf
+    gzip chr${chr}-REFfixed.vcf
     '''}}
 //////////////////////////////////////////////////
 if(params.cloud=="off"){
@@ -421,7 +428,7 @@ if(params.cloud=="off"){
       ## -- 19 : Create Chunks
       chr=!{chromosome}
       bcftools index -f chr${chr}-REFfixed.vcf.gz
-      bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf| bgzip -c > isec_chr_${chr}.vcf.gz
+      bcftools isec -n +2 chr${chr}-REFfixed.vcf.gz !{params.BCFref}ALL.chr${chr}_GRCh38.genotypes.20170504.bcf | bgzip -c > isec_chr_${chr}.vcf.gz
       Rscript !{baseDir}/bin/create_chunks.r ${chr}
       chunks=$(wc -l chunk_split_chr${chr}.txt | awk '{print $1}')
       '''}
