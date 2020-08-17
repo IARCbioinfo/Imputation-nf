@@ -403,9 +403,9 @@ if(params.QC_cloud==null){
     bcftools norm --check-ref ws -f ref.fa chr${chr}.vcf.gz | bcftools view -m 2 -M 2 | bgzip -c > chr${chr}-REFfixed.vcf.gz
     python2 checkVCF.py -r ref.fa -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
     
-    gunzip chr${chr}-REFfixed.vcf.gz
+    bgzip -d chr${chr}-REFfixed.vcf.gz
     sed -i "s/^${chr}\t/chr${chr}\t/g" chr${chr}-REFfixed.vcf
-    gzip chr${chr}-REFfixed.vcf
+    bgzip -c chr${chr}-REFfixed.vcf > chr${chr}-REFfixed.vcf.gz
     '''}}
 //////////////////////////////////////////////////
 if(params.cloud=="off"){
