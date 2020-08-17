@@ -131,7 +131,7 @@ process Legend_Y{
   bcftools query -f '%ID:%POS:%REF:%ALT\\ %CHROM\\ %POS\\ %REF\\ %ALT\\ %INFO/AFR_AF\\ %INFO/AMR_AF\\ %INFO/EAS_AF\\ %INFO/EUR_AF\\ %INFO/SAS_AF\\ %INFO/AF\\n' ALL.chr\${CHR}_GRCh38.genotypes.20170504.vcf.gz > chr\${CHR}.legend
   sed -i 's/Y/24/g' chr\${CHR}.legend
   '''}
-process Concatenation{
+process Legend_Concatenation{
   publishDir params.out+'files/', mode: 'copy'
   
   input:
