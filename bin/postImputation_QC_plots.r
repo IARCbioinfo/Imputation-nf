@@ -130,7 +130,7 @@ p1 = ggplot(temp1, aes(x=as.numeric(temp1$INFO), color=AF_GROUP, fill=AF_GROUP))
         legend.key.size = unit(0.3, "lines"),legend.position = c(0.5, 0.5))
 
 # Plot AF of panel vs. imputed variants
-p2 = ggplot(merge_SNPs_data,aes(x=as.numeric(AF_ref),y=as.numeric(merge_SNPs_data$AF_target))) + stat_binhex(bins = 500) +
+p2 = ggplot(merge_SNPs_data,aes(x=as.numeric(merge_SNPs_data$AF_ref),y=as.numeric(merge_SNPs_data$AF_target))) + stat_binhex(bins = 500) +
   labs(title=paste0("Imputed AF vs. reference panel AF"),x="AF in ref data", y = "AF in target data") +
   guides(shape = guide_legend(override.aes = list(size = legend_size)),
         color = guide_legend(override.aes = list(size = legend_size))) +
