@@ -68,8 +68,8 @@ if (params.help) {
     log.info ""
     exit 0
 } else {
-/* Software information */
-log.info "help:                               ${params.help}"
+    /* Software information */
+    log.info "help:                               ${params.help}"
 }
 
 // -- Option :
@@ -299,8 +299,6 @@ if(params.QC_cloud==null){
     plink --bfile target_${pop} --geno !{params.geno2} --make-bed --out target_geno_${pop}
     plink --bfile target_geno_${pop} --hwe !{params.hwe} --make-bed --out target_hwe_${pop}
     '''}
-
-
   process Make_SNP_Filtering{
     publishDir params.output+'result/'+params.target+'/SNP_filtering/', mode: 'copy'
     input:
@@ -348,7 +346,6 @@ if(params.QC_cloud==null){
     file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
     file data from TargetQC2.collect()
 
-
     output:
     file ('*.pdf') into FigureQC2
 
@@ -387,25 +384,19 @@ if(params.QC_cloud==null){
     '''
     chr=!{chromosome}
     export TMPDIR=/tmp/
+    
     ## -- 16 : Remove ambiguous strand/unknown SNPs
     awk '{ if (($5=="T" && $6=="A")||($5=="A" && $6=="T")||($5=="C" && $6=="G")||($5=="G" && $6=="C")) print $2, "ambig" ; else print $2 ;}' target5-updated-chr${chr}.bim | grep -v ambig | grep -v -e --- | sort -u > NonAmbiguous${chr}.snplist.txt
     plink --bfile target5-updated-chr${chr} --extract NonAmbiguous${chr}.snplist.txt --output-chr chr26 --make-bed --out target6_chr${chr}
-
-    ## -- 17 : Create VCF
-    plink --bfile target6_chr${chr} --recode vcf --out target6_chr${chr}_vcf 
-    bcftools sort target6_chr${chr}_vcf.vcf | bgzip -c > chr${chr}.vcf.gz 
-
-    sed "s/>chr${chr}/>${chr}/g" /data/gep/MR_Signatures/work/Boris/protocol_min/data/files/GRCh38_full_analysis_set_plus_decoy_hla.fa > ref.fa
-    samtools faidx ref.fa
-
-    ## -- 18 : Check SNPs
-    python2 checkVCF.py -r ref.fa -o after_check_${chr} chr${chr}.vcf.gz
-    bcftools norm --check-ref ws -f ref.fa chr${chr}.vcf.gz | bcftools view -m 2 -M 2 | bgzip -c > chr${chr}-REFfixed.vcf.gz
-    python2 checkVCF.py -r ref.fa -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
     
-    bgzip -d chr${chr}-REFfixed.vcf.gz
-    sed -i "s/^${chr}\t/chr${chr}\t/g" chr${chr}-REFfixed.vcf
-    bgzip -c chr${chr}-REFfixed.vcf > chr${chr}-REFfixed.vcf.gz
+    ## -- 17 : Create VCF
+    plink --bfile target6_chr${chr} --output-chr chr26 --recode vcf --out target6_chr${chr}_vcf
+    bcftools sort target6_chr${chr}_vcf.vcf | bgzip -c  > chr${chr}.vcf.gz
+    
+    ## -- 18 : Check SNPs
+    python2 checkVCF.py -r !{params.fasta} -o after_check_${chr} chr${chr}.vcf.gz
+    bcftools norm --check-ref ws -f !{params.fasta} chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
+    python2 checkVCF.py -r !{params.fasta} -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
     '''}}
 //////////////////////////////////////////////////
 if(params.cloud=="off"){
@@ -490,7 +481,7 @@ if(params.cloud=="off"){
       file data from FileVCF.collect()
 
       output:
-      file '*_combined.vcf.gz' into Imputation
+      file '*dose.vcf.gz' into Imputation
 
       shell:
       '''
@@ -505,7 +496,7 @@ if(params.cloud=="off"){
     process QC3_sh{
       input:
       val population from('ALL','CEU','YRI','CHB_JPT')
-      each chromosome from 22
+      each chromosome from 1..22
       file data from Imputation.collect()
       file data from Admixture2.collect()
       file data from Channel.fromPath(params.BCFref+'/*').collect()
@@ -518,7 +509,7 @@ if(params.cloud=="off"){
       pop=!{population}
       chr=!{chromosome}
 
-      ## -- 24 : QC3
+      ## -- 24 : QC3 from local data
       bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
       '''}}
   else{
@@ -527,7 +518,6 @@ if(params.cloud=="off"){
       val population from('ALL','CEU','YRI','CHB_JPT')
       each chromosome from 1..22
       file data from Channel.fromPath(params.BCFref+'/*').collect()
-      //file data from Channel.fromPath('/data/gep/MR_Signatures/work/Boris/protocol_min/result/HGDP/admixture/out_pop_admixture').collect()
       file data from Channel.fromPath(params.output+'result/'+params.target+'/admixture/out_pop_admixture').collect()
       file data from Channel.fromPath(params.QC_cloud+'*').collect()
       
@@ -539,7 +529,7 @@ if(params.cloud=="off"){
       pop=!{population}
       chr=!{chromosome}
 
-      ## -- 24 : QC3
+      ## -- 24 : QC3 from cloud data
       bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
       '''}}
   process QC3_R{
@@ -552,6 +542,7 @@ if(params.cloud=="off"){
 
     output:
     file '*v2.{txt,pdf}' into PostImputation_QC_R_result
+    file '*CHR.pdf' into PostImputation_QC_R_result2
 
     shell:
     '''

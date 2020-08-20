@@ -117,7 +117,7 @@ temp1 <- merge_SNPs_data
 temp1$AF_GROUP <- factor(temp1$AF_GROUP, levels = c("1", "2","3"), labels = c("MAF > 5%", "MAF 0.5-5%", "MAF < 0.5%"))
 
 # Plot INFO-value distributions
-p1 = ggplot(temp1, aes(x=INFO, color=AF_GROUP, fill=AF_GROUP)) + 
+p1 = ggplot(temp1, aes(x=as.numeric(temp1$INFO), color=AF_GROUP, fill=AF_GROUP)) + 
   geom_histogram(aes(y=..density..), alpha=0.4,position="identity",bins = 100) + 
   geom_density(alpha=.2) +
   labs(title=paste0("Distribution of R2"),x="R2", y = "Density") +
@@ -130,7 +130,7 @@ p1 = ggplot(temp1, aes(x=INFO, color=AF_GROUP, fill=AF_GROUP)) +
         legend.key.size = unit(0.3, "lines"),legend.position = c(0.5, 0.5))
 
 # Plot AF of panel vs. imputed variants
-p2 = ggplot(merge_SNPs_data,aes(x=AF_ref,y=AF_target)) + stat_binhex(bins = 500) +
+p2 = ggplot(merge_SNPs_data,aes(x=as.numeric(AF_ref),y=as.numeric(merge_SNPs_data$AF_target))) + stat_binhex(bins = 500) +
   labs(title=paste0("Imputed AF vs. reference panel AF"),x="AF in ref data", y = "AF in target data") +
   guides(shape = guide_legend(override.aes = list(size = legend_size)),
         color = guide_legend(override.aes = list(size = legend_size))) +
@@ -140,27 +140,27 @@ p2 = ggplot(merge_SNPs_data,aes(x=AF_ref,y=AF_target)) + stat_binhex(bins = 500)
         legend.key.size = unit(0.5, "lines"),legend.position = c(0.85, 0.3))
 
 # Imputed data AF histogram for intersecting variants
-p3 = ggplot(merge_SNPs_data, aes(x=AF_target)) + 
+p3 = ggplot(merge_SNPs_data, aes(x=as.numeric(merge_SNPs_data$AF_target))) + 
   geom_histogram(color="black", fill="white",bins=300)+
   labs(title=paste0("AF distribution of imputed variants"),x="Imputed AF", y = "Count")
 
 merge_SNPs_data=merge_SNPs_data[order(merge_SNPs_data$CHR,merge_SNPs_data$POS),]
-x_coords=sapply(13:22, function(chr){
-  sub_chr=merge_SNPs_data[which(merge_SNPs_data$CHR==chr),]
+x_coords=sapply(1:22, function(chr){
+  sub_chr=merge_SNPs_data[which(merge_SNPs_data$CHR==paste0("chr",chr)),]
   pos=sub_chr$POS[nrow(sub_chr)]
-  return(which(merge_SNPs_data$POS==pos & merge_SNPs_data$CHR==chr))
+  return(which(merge_SNPs_data$POS==pos & merge_SNPs_data$CHR==paste0("chr",chr)))
 })
+
 df=data.frame(x=x_coords,y=rep(-0.55,length(x_coords)),xend=x_coords,yend=rep(0.55,length(x_coords)))
-p4 = ggplot(merge_SNPs_data,aes(x=1:nrow(merge_SNPs_data),y=AF_target-AF_ref)) + stat_binhex(bins = 500) +
+p4 = ggplot(merge_SNPs_data,aes(x=1:nrow(merge_SNPs_data),y=merge_SNPs_data$AF_target-merge_SNPs_data$AF_ref)) + stat_binhex(bins = 500) +
   labs(title=paste0("Absolute AF differences along the chromosome"),x="Chromosome position", y = "AF difference (imputed - panel)") +
   guides(shape = guide_legend(override.aes = list(size = legend_size)),
-        color = guide_legend(override.aes = list(size = legend_size))) +
+        color = guide_legend(override.aes = list(size = legend_size)))+
   scale_fill_viridis() +
   theme(legend.title = element_text(size = text_size), 
         legend.text  = element_text(size = text_size),
         legend.key.size = unit(0.5, "lines"),legend.position = c(0.85, 0.8)) + 
   geom_segment(aes(x = x, y = y, xend = xend , yend = yend),data=df) 
-
 
 pdf(paste0("AF_afterImputation",pop,"_R2thr_",INFO_thr,"_allCHR.pdf"))
 grid.arrange(p1, p2, p3, p4, nrow = 2)
