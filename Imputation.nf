@@ -533,7 +533,8 @@ if(params.cloud=="off"){
       bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
       '''}}
   process QC3_R{
-    publishDir params.output+'result/'+params.target+'/QC3/', mode: 'copy'
+    if(params.QC_cloud==null){publishDir params.output+'result/'+params.target+'/QC3/', mode: 'copy'}
+    else{publishDir params.output+'result/'+params.target+'/QC3_cloud/', mode: 'copy'}
     cpus 22
     
     input:
