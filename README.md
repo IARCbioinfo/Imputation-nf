@@ -72,7 +72,6 @@ You can avoid installing all the external software of the main scritp by only in
   * #### Optional
 | Name      | Default value | Description     |
 |-----------|---------------|-----------------|
-
 |--script | my/directory/script/bin | The path of the bin script directory, to be able to run the annexe programme grom the pipeline |
 | --geno1   |          0.03 | First genotyping call rate plink threshold, apply in the full target dataset |
 | --geno2   |          0.03 | Second genotyping call rate plink threshold, apply in the target dataset divide by population |
