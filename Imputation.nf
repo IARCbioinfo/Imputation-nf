@@ -149,7 +149,13 @@ if(params.QC_cloud==null){
     bash Run-plink-update.sh
     '''}
   process Admixture{
-    publishDir params.output+'result/'+params.target+'/admixture/', mode: 'copy', pattern: 'out_pop_admixture/'
+    publishDir params.output+params.target+'/admixture/', mode: 'copy',
+       saveAs: {filename ->
+           if (filename == "target4.bim") null
+           else if (filename == "target4.bed") null
+           else if (filename == "target4.fam") null
+           else filename
+       }
 
     input:
     file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
@@ -248,7 +254,7 @@ if(params.QC_cloud==null){
     awk 'NR==FNR {a[$1,$2]=$5;next}($1,$2) in a{print $1,$2,$6,a[$1,$2]}' het_${pop}.txt miss_${pop}.imiss > het_${pop}.imiss.txt
     '''}
   process QC1{
-    publishDir params.output+'result/'+params.target+'/QC1/', mode: 'copy'
+    publishDir params.output+params.target+'/QC1/', mode: 'copy'
 
     input:
     file data from QC.collect()
@@ -298,7 +304,7 @@ if(params.QC_cloud==null){
     plink --bfile target_geno_${pop} --hwe !{params.hwe} --make-bed --out target_hwe_${pop}
     '''}
   process Make_SNP_Filtering{
-    publishDir params.output+'result/'+params.target+'/SNP_filtering/', mode: 'copy'
+    publishDir params.output+params.target+'/SNP_filtering/', mode: 'copy'
     input:
     file data from DirFiltering.collect()
     file data from HWresult.collect()
@@ -334,7 +340,7 @@ if(params.QC_cloud==null){
     bash Run-plink.sh
     '''}
   process QC2{
-    publishDir params.output+'result/'+params.target+'/QC2/', mode: 'copy'
+    publishDir params.output+params.target+'/QC2/', mode: 'copy'
 
     input:
     file data from SNPsFilter2.collect()
@@ -395,7 +401,8 @@ if(params.QC_cloud==null){
     python2 checkVCF.py -r !{params.fasta} -o after_check_${chr} chr${chr}.vcf.gz
     bcftools norm --check-ref ws -f !{params.fasta} chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
     python2 checkVCF.py -r !{params.fasta} -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
-    '''}}
+    '''}
+  }
 //////////////////////////////////////////////////
 if(params.cloud=="off"){
   if(params.QC_cloud==null){
@@ -471,7 +478,7 @@ if(params.cloud=="off"){
       bcftools index -f chr_${chr}_chunk${chunk}.imputed.dose.vcf.gz
       '''}
     process Concatenation{
-      publishDir params.output+'result/'+params.target+'/Result_Imputation/', mode: 'copy'
+      publishDir params.output+params.target+'/Result_Imputation/', mode: 'copy'
       cpus=16
 
       input:
@@ -516,7 +523,7 @@ if(params.cloud=="off"){
       val population from('ALL','CEU','YRI','CHB_JPT')
       each chromosome from 1..22
       file data from Channel.fromPath(params.BCFref+'/*').collect()
-      file data from Channel.fromPath(params.output+'result/'+params.target+'/admixture/out_pop_admixture').collect()
+      file data from Channel.fromPath(params.output+params.target+'/admixture/out_pop_admixture').collect()
       file data from Channel.fromPath(params.QC_cloud+'*').collect()
 
       output:
@@ -531,8 +538,8 @@ if(params.cloud=="off"){
       bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
       '''}}
   process QC3_R{
-    if(params.QC_cloud==null){publishDir params.output+'result/'+params.target+'/QC3/', mode: 'copy'}
-    else{publishDir params.output+'result/'+params.target+'/QC3_cloud/', mode: 'copy'}
+    if(params.QC_cloud==null){publishDir params.output+params.target+'/QC3/', mode: 'copy'}
+    else{publishDir params.output+params.target+'/QC3_cloud/', mode: 'copy'}
     cpus 22
 
     input:
