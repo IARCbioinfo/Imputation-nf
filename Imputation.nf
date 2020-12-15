@@ -592,5 +592,5 @@ if(params.cloud=="on"){
       curl -H "X-Auth-Token: ${tOPMed}" \
           -F "input-files=@chr1-REFfixed.vcf.gz" -F "input-files=@chr2-REFfixed.vcf.gz" -F "input-files=@chr3-REFfixed.vcf.gz" -F "input-files=@chr4-REFfixed.vcf.gz" -F "input-files=@chr5-REFfixed.vcf.gz" -F "input-files=@chr6-REFfixed.vcf.gz" -F "input-files=@chr7-REFfixed.vcf.gz" -F "input-files=@chr8-REFfixed.vcf.gz" -F "input-files=@chr9-REFfixed.vcf.gz" -F "input-files=@chr10-REFfixed.vcf.gz" -F "input-files=@chr11-REFfixed.vcf.gz" -F "input-files=@chr12-REFfixed.vcf.gz" -F "input-files=@chr13-REFfixed.vcf.gz" -F "input-files=@chr14-REFfixed.vcf.gz" -F "input-files=@chr15-REFfixed.vcf.gz" -F "input-files=@chr16-REFfixed.vcf.gz" -F "input-files=@chr17-REFfixed.vcf.gz" -F "input-files=@chr18-REFfixed.vcf.gz" -F "input-files=@chr19-REFfixed.vcf.gz" -F "input-files=@chr20-REFfixed.vcf.gz" -F "input-files=@chr21-REFfixed.vcf.gz" -F "input-files=@chr22-REFfixed.vcf.gz" \
           -F "input-build=hg38" -F "input-mode=imputation" -F "input-population=mixed" -F "input-refpanel=apps@topmed-r2@1.0.0" -F "input-phasing=eagle"\
-          https://imputation.biodatacatalyst.nhlbi.nih.gov/api/v2/jobs/submit/imputationserver@1.3.3 
+          https://imputation.biodatacatalyst.nhlbi.nih.gov/api/v2/jobs/submit/imputationserver@1.5.7 
       '''}}}
