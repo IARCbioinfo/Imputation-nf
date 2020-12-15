@@ -43,14 +43,13 @@ if (params.help) {
     log.info "--<OPTION>                      <TYPE>                      <DESCRIPTION>"
     log.info "--input                      FOLDER                      Folder where you can find your data to run the pipeline"
     log.info "--script                      FOLDER                      Folder where you can find the auxiliary scripts of the pipeline"
-    log.info "--out                      FOLDER                      Folder where you want to put the results of the pipeline"
+    log.info "--output                      FOLDER                      Folder in which the pipeline outputs while be saved"
     log.info "--VCFref                      FOLDER                      Folder to use as VCF reference"
     log.info "--BCFref                      FOLDER                      Folder to use as BCF reference"
     log.info "--M3VCFref                      FOLDER                      Folder to use as M3VCF reference"
     log.info "--legend                      FILE                      File to use as .legend"
     log.info "--fasta                      FILE                      File to use as fasta reference"
     log.info "--chain                      FILE                      File to use as liftover conversion"
-    log.info "--out                      FOLDER                      Folder to use for results"
     log.info "--geno1                      FLOAT                       Value for the first genotyping call rate plink option"
     log.info "--geno2                      FLOAT                     Value for the second genotyping call rate plink option"
     log.info "--maf                      FLOAT                      Minor Allele Frequencie thresold for the data filtering step"
@@ -75,16 +74,15 @@ if (params.help) {
 // -- Option :
 params.target = null
 params.origin = "hapmap_r23a"
-params.geno1 = 0.03 
+params.geno1 = 0.03
 params.geno2 = 0.03
 params.maf = 0.01
 params.pihat = 0.185
-params.hwe = 1e-8 
+params.hwe = 1e-8
 
 // -- Path :
 params.input = null
 params.output = null
-params.script = 'IARCbioinfo/Imputation-nf/bin/' 
 params.targetDir = params.input+params.target+'/'
 
 params.folder = params.input+'files/'
@@ -111,7 +109,7 @@ params.QC_cloud = null
 
 // -- Pipeline :
 if(params.QC_cloud==null){
-  process UpdateHG38{ 
+  process UpdateHG38{
     input:
     file data from Channel.fromPath(params.targetDir+'*').collect()
     file data from Channel.fromPath(params.folder+'HRC-1000G-check-bim-NoReadKey.pl').collect()
@@ -147,7 +145,7 @@ if(params.QC_cloud==null){
 
     plink --freq --bfile !{params.target} --allow-no-sex --make-bed --out dataset3
     perl HRC-1000G-check-bim-NoReadKey.pl -b !{params.target}.bim -f dataset3.frq -r !{params.legend} -g -x -n
-    grep -v "real-ref-alleles" Run-plink.sh> Run-plink-update.sh 
+    grep -v "real-ref-alleles" Run-plink.sh> Run-plink-update.sh
     bash Run-plink-update.sh
     '''}
   process Admixture{
@@ -193,9 +191,9 @@ if(params.QC_cloud==null){
       plink --bfile target1 --exclude merge1-merge.missnp --make-bed --out target2
       plink --bfile ref2 --bmerge target2 --allow-no-sex --make-bed --out merge
     else
-      mv merge1.fam merge.fam 
-      mv merge1.bed merge.bed 
-      mv merge1.bim merge.bim 
+      mv merge1.fam merge.fam
+      mv merge1.bed merge.bed
+      mv merge1.bim merge.bim
     fi
 
     awk '{print $2}' merge.fam  >  all_samples.txt
@@ -384,15 +382,15 @@ if(params.QC_cloud==null){
     '''
     chr=!{chromosome}
     export TMPDIR=/tmp/
-    
+
     ## -- 16 : Remove ambiguous strand/unknown SNPs
     awk '{ if (($5=="T" && $6=="A")||($5=="A" && $6=="T")||($5=="C" && $6=="G")||($5=="G" && $6=="C")) print $2, "ambig" ; else print $2 ;}' target5-updated-chr${chr}.bim | grep -v ambig | grep -v -e --- | sort -u > NonAmbiguous${chr}.snplist.txt
     plink --bfile target5-updated-chr${chr} --extract NonAmbiguous${chr}.snplist.txt --output-chr chr26 --make-bed --out target6_chr${chr}
-    
+
     ## -- 17 : Create VCF
     plink --bfile target6_chr${chr} --output-chr chr26 --recode vcf --out target6_chr${chr}_vcf
     bcftools sort target6_chr${chr}_vcf.vcf | bgzip -c  > chr${chr}.vcf.gz
-    
+
     ## -- 18 : Check SNPs
     python2 checkVCF.py -r !{params.fasta} -o after_check_${chr} chr${chr}.vcf.gz
     bcftools norm --check-ref ws -f !{params.fasta} chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
@@ -520,7 +518,7 @@ if(params.cloud=="off"){
       file data from Channel.fromPath(params.BCFref+'/*').collect()
       file data from Channel.fromPath(params.output+'result/'+params.target+'/admixture/out_pop_admixture').collect()
       file data from Channel.fromPath(params.QC_cloud+'*').collect()
-      
+
       output:
       file '*.{txt,frq}' into PostImputation_QC_sh_result
 
@@ -536,7 +534,7 @@ if(params.cloud=="off"){
     if(params.QC_cloud==null){publishDir params.output+'result/'+params.target+'/QC3/', mode: 'copy'}
     else{publishDir params.output+'result/'+params.target+'/QC3_cloud/', mode: 'copy'}
     cpus 22
-    
+
     input:
     val population from('ALL','CEU','YRI','CHB_JPT')
     file data from PostImputation_QC_sh_result.collect()
@@ -580,7 +578,7 @@ if(params.cloud=="on"){
       input:
       file data from Channel.fromPath(params.token_TOPMed).collect()
       file data from FilterFinal2.collect()
-      
+
       when:
       !params.token_TOPMed!=null
 
@@ -592,5 +590,5 @@ if(params.cloud=="on"){
       curl -H "X-Auth-Token: ${tOPMed}" \
           -F "input-files=@chr1-REFfixed.vcf.gz" -F "input-files=@chr2-REFfixed.vcf.gz" -F "input-files=@chr3-REFfixed.vcf.gz" -F "input-files=@chr4-REFfixed.vcf.gz" -F "input-files=@chr5-REFfixed.vcf.gz" -F "input-files=@chr6-REFfixed.vcf.gz" -F "input-files=@chr7-REFfixed.vcf.gz" -F "input-files=@chr8-REFfixed.vcf.gz" -F "input-files=@chr9-REFfixed.vcf.gz" -F "input-files=@chr10-REFfixed.vcf.gz" -F "input-files=@chr11-REFfixed.vcf.gz" -F "input-files=@chr12-REFfixed.vcf.gz" -F "input-files=@chr13-REFfixed.vcf.gz" -F "input-files=@chr14-REFfixed.vcf.gz" -F "input-files=@chr15-REFfixed.vcf.gz" -F "input-files=@chr16-REFfixed.vcf.gz" -F "input-files=@chr17-REFfixed.vcf.gz" -F "input-files=@chr18-REFfixed.vcf.gz" -F "input-files=@chr19-REFfixed.vcf.gz" -F "input-files=@chr20-REFfixed.vcf.gz" -F "input-files=@chr21-REFfixed.vcf.gz" -F "input-files=@chr22-REFfixed.vcf.gz" \
           -F "input-build=hg38" -F "input-mode=imputation" -F "input-population=mixed" -F "input-refpanel=apps@topmed-r2@1.0.0" -F "input-phasing=eagle"\
-          https://imputation.biodatacatalyst.nhlbi.nih.gov/api/v2/jobs/submit/imputationserver@1.5.7 
+          https://imputation.biodatacatalyst.nhlbi.nih.gov/api/v2/jobs/submit/imputationserver@1.5.7
       '''}}}
