@@ -16,6 +16,7 @@ LABEL about.license="GNU-3.0"
 COPY environment.yml /
 RUN apt-get update && apt-get install -y procps && apt-get clean -y
 RUN conda env create -n Imputation-nf -f /environment.yml && conda clean -a
+RUN apt-get install -y curl
 
 RUN apt-get install -y cmake python-pip python-dev
 RUN pip install cget 
@@ -26,7 +27,7 @@ RUN tar xvzf Eagle_v2.4.1.tar.gz
 RUN rm Eagle_v2.4.1.tar.gz
 
 RUN curl -sL imputationbot.now.sh | bash
-cp mpileup2readcounts /usr/local/bin
+RUN cp imputationpot /usr/local/bin
 
 ENV PATH /opt/conda/envs/Imputation-nf/bin:$PATH
 ENV PATH="$PATH:/Eagle_v2.4.1"
