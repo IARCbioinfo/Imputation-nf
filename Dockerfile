@@ -25,6 +25,9 @@ RUN wget https://data.broadinstitute.org/alkesgroup/Eagle/downloads/Eagle_v2.4.1
 RUN tar xvzf Eagle_v2.4.1.tar.gz
 RUN rm Eagle_v2.4.1.tar.gz
 
+RUN curl -sL imputationbot.now.sh | bash
+cp mpileup2readcounts /usr/local/bin
+
 ENV PATH /opt/conda/envs/Imputation-nf/bin:$PATH
 ENV PATH="$PATH:/Eagle_v2.4.1"
 ENV PATH="$PATH:/Minimac4/release-build" 
