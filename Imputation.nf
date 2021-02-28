@@ -104,11 +104,12 @@ params.chain = params.folder
 params.cloud = "off"
 params.token_Michighan = null
 params.token_TOPMed = null
+params.imputationbot_password = null
 
 params.QC_cloud = null
 
 // -- Pipeline :
-if(params.QC_cloud==null){
+//if(params.QC_cloud==null){
   process UpdateHG38{
     input:
     file data from Channel.fromPath(params.targetDir+'*').collect()
@@ -402,7 +403,7 @@ if(params.QC_cloud==null){
     bcftools norm --check-ref ws -f !{params.fasta} chr${chr}.vcf.gz | bcftools view -m 2 -M 2  | bgzip -c > chr${chr}-REFfixed.vcf.gz
     python2 checkVCF.py -r !{params.fasta} -o after_check2_${chr} chr${chr}-REFfixed.vcf.gz
     '''}
-  }
+//  }
 //////////////////////////////////////////////////
 if(params.cloud=="off"){
   if(params.QC_cloud==null){
@@ -498,45 +499,86 @@ if(params.cloud=="off"){
       #bcftools concat --threads 16 -f chr_${chr}_imp_res.txt -Ou | bcftools sort --temp-dir chr_${chr} -Ou | bgzip -c > chr${chr}.dose.vcf.gz
       bcftools concat --threads 16 -f chr_${chr}_imp_res.txt -Ou  | bgzip -c > chr${chr}.dose.vcf.gz
       '''}
-    process QC3_sh{
+  }
+}
+
+//////////////////////////////////////////////////
+if(params.cloud=="on"){
+  if (params.token_Michighan){
+    process Michighan_Imputation{
+      publishDir params.output+params.target+'/Result_Imputation/', mode: 'move'
       input:
-      val population from('ALL','CEU','YRI','CHB_JPT')
-      each chromosome from 1..22
-      file data from Imputation.collect()
-      file data from Admixture2.collect()
-      file data from Channel.fromPath(params.BCFref+'/*').collect()
+      file data from Channel.fromPath(params.imputationbot_password).collect()
+      file data from FilterFinal2.collect()
 
       output:
-      file '*.{txt,frq}' into PostImputation_QC_sh_result
+      file 'job-*/local/*dose.vcf.gz' into Imputation_dose
+      // file '*info.gz' into Imputation_info
+      // file 'stat/' into Imputation_stat
+      // file 'log/' into Imputation_log
+
+      when:
+      !params.token_Michighan!=null
 
       shell:
       '''
-      pop=!{population}
-      chr=!{chromosome}
+      pw=$(cat !{params.imputationbot_password})
+      token=$(cat !{params.token_Michighan})
+      imputationbot add-instance https://imputationserver.sph.umich.edu ${token}
+      imputationbot impute --files chr*-REFfixed.vcf.gz --refpanel hrc-r1.1 --build hg38 --autoDownload --password ${pw} --population mixed
+      '''
+    }
+  }
 
-      ## -- 24 : QC3 from local data
-      bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
-      '''}}
-  else{
-    process QC3_sh_cloud{
+  if (params.token_TOPMed){
+    process TOPMed_Imputation{
+      publishDir params.output+params.target+'/Result_Imputation/', mode: 'move', pattern="*dose.vcf.gz"
       input:
-      val population from('ALL','CEU','YRI','CHB_JPT')
-      each chromosome from 1..22
-      file data from Channel.fromPath(params.BCFref+'/*').collect()
-      file data from Channel.fromPath(params.output+params.target+'/admixture/out_pop_admixture').collect()
-      file data from Channel.fromPath(params.QC_cloud+'*').collect()
+      file data from Channel.fromPath(params.imputationbot_password).collect()
+      file data from FilterFinal2.collect()
 
       output:
-      file '*.{txt,frq}' into PostImputation_QC_sh_result
+      file 'job-*/local/*dose.vcf.gz' into Imputation_dose
+      // file '*info.gz' into Imputation_info
+      // file 'stat/' into Imputation_stat
+      // file 'log/' into Imputation_log
+
+      when:
+      !params.token_TOPMed!=null
 
       shell:
       '''
-      pop=!{population}
-      chr=!{chromosome}
+      pw=$(cat !{params.imputationbot_password})
+      token=$(cat !{params.token_TOPMed})
+      imputationbot add-instance https://imputation.biodatacatalyst.nhlbi.nih.gov ${token}
+      imputationbot impute --files chr*-REFfixed.vcf.gz --refpanel topmed-r2 --build hg38 --autoDownload --password ${pw} --population mixed
+      '''
+    }
 
-      ## -- 24 : QC3 from cloud data
-      bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
-      '''}}
+  }
+
+  process QC3_sh{
+    input:
+    val population from('ALL','CEU','YRI','CHB_JPT')
+    each chromosome from 1..22
+    file data from Channel.fromPath(params.output+params.target+'/Result_Imputation/*dose.vcf.gz').collect()
+    file data from Admixture2.collect()
+    file data from Channel.fromPath(params.BCFref+'/*').collect()
+
+    output:
+    file '*.{txt,frq}' into PostImputation_QC_sh_result
+    // file '*dose.vcf.gz' into Imputation_dose2
+
+    shell:
+    '''
+    pop=!{population}
+    chr=!{chromosome}
+
+    ## -- 24 : QC3
+    bash !{baseDir}/bin/postImputation_QC.sh ${chr} ${pop}
+    '''
+  }
+
   process QC3_R{
     if(params.QC_cloud==null){publishDir params.output+params.target+'/QC3/', mode: 'copy'}
     else{publishDir params.output+params.target+'/QC3_cloud/', mode: 'copy'}
@@ -554,48 +596,6 @@ if(params.cloud=="off"){
     '''
     pop=!{population}
     Rscript !{baseDir}/bin/postImputation_QC_plots.r ${pop} 0.3
-    '''}}
-
-//////////////////////////////////////////////////
-if(params.cloud=="on"){
-  if (params.token_Michighan){
-    process Michighan_Imputation{
-      input:
-      file data from Channel.fromPath(params.token_Michighan).collect()
-      file data from FilterFinal.collect()
-
-      shell:
-      '''
-      michighan=$(cat !{params.token_Michighan})
-
-      ## -- Michighan Imputation :
-      ## Reference : 1000G phase 3
-      curl https://imputationserver.sph.umich.edu/api/v2/jobs/submit/minimac4 -H "X-Auth-Token: ${michighan}" \
-          -F "files=@chr1-REFfixed.vcf.gz" -F "files=@chr2-REFfixed.vcf.gz" -F "files=@chr3-REFfixed.vcf.gz" -F "files=@chr4-REFfixed.vcf.gz" -F "files=@chr5-REFfixed.vcf.gz" -F "files=@chr6-REFfixed.vcf.gz" -F "files=@chr7-REFfixed.vcf.gz" -F "files=@chr8-REFfixed.vcf.gz" -F "files=@chr9-REFfixed.vcf.gz" -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr11-REFfixed.vcf.gz" -F "files=@chr12-REFfixed.vcf.gz" -F "files=@chr13-REFfixed.vcf.gz" -F "files=@chr14-REFfixed.vcf.gz" -F "files=@chr15-REFfixed.vcf.gz" -F "files=@chr16-REFfixed.vcf.gz" -F "files=@chr17-REFfixed.vcf.gz" -F "files=@chr18-REFfixed.vcf.gz" -F "files=@chr19-REFfixed.vcf.gz" -F "files=@chr20-REFfixed.vcf.gz" -F "files=@chr21-REFfixed.vcf.gz" -F "files=@chr22-REFfixed.vcf.gz" \
-          -F "refpanel=apps@1000g-phase-3-v5" -F "phasing=eagle" -F "mode=imputation" -F "population=mixed" -F "build=hg38"
-
-      ## Reference : HRC
-      curl https://imputationserver.sph.umich.edu/api/v2/jobs/submit/minimac4 -H "X-Auth-Token: ${michighan}" \
-          -F "files=@chr1-REFfixed.vcf.gz" -F "files=@chr2-REFfixed.vcf.gz" -F "files=@chr3-REFfixed.vcf.gz" -F "files=@chr4-REFfixed.vcf.gz" -F "files=@chr5-REFfixed.vcf.gz" -F "files=@chr6-REFfixed.vcf.gz" -F "files=@chr7-REFfixed.vcf.gz" -F "files=@chr8-REFfixed.vcf.gz" -F "files=@chr9-REFfixed.vcf.gz" -F "files=@chr10-REFfixed.vcf.gz" -F "files=@chr11-REFfixed.vcf.gz" -F "files=@chr12-REFfixed.vcf.gz" -F "files=@chr13-REFfixed.vcf.gz" -F "files=@chr14-REFfixed.vcf.gz" -F "files=@chr15-REFfixed.vcf.gz" -F "files=@chr16-REFfixed.vcf.gz" -F "files=@chr17-REFfixed.vcf.gz" -F "files=@chr18-REFfixed.vcf.gz" -F "files=@chr19-REFfixed.vcf.gz" -F "files=@chr20-REFfixed.vcf.gz" -F "files=@chr21-REFfixed.vcf.gz" -F "files=@chr22-REFfixed.vcf.gz" \
-          -F "refpanel=apps@hrc-r1.1" -F "phasing=eagle" -F "mode=imputation" -F "population=mixed" -F "build=hg38"
-      '''}}
-
-  if (params.token_TOPMed){
-    process TOPMed_Imputation{
-      input:
-      file data from Channel.fromPath(params.token_TOPMed).collect()
-      file data from FilterFinal2.collect()
-
-      when:
-      !params.token_TOPMed!=null
-
-      shell:
-      '''
-      tOPMed=$(cat !{params.token_TOPMed})
-
-      ## -- TOPMed Imputation :
-      curl -H "X-Auth-Token: ${tOPMed}" \
-          -F "input-files=@chr1-REFfixed.vcf.gz" -F "input-files=@chr2-REFfixed.vcf.gz" -F "input-files=@chr3-REFfixed.vcf.gz" -F "input-files=@chr4-REFfixed.vcf.gz" -F "input-files=@chr5-REFfixed.vcf.gz" -F "input-files=@chr6-REFfixed.vcf.gz" -F "input-files=@chr7-REFfixed.vcf.gz" -F "input-files=@chr8-REFfixed.vcf.gz" -F "input-files=@chr9-REFfixed.vcf.gz" -F "input-files=@chr10-REFfixed.vcf.gz" -F "input-files=@chr11-REFfixed.vcf.gz" -F "input-files=@chr12-REFfixed.vcf.gz" -F "input-files=@chr13-REFfixed.vcf.gz" -F "input-files=@chr14-REFfixed.vcf.gz" -F "input-files=@chr15-REFfixed.vcf.gz" -F "input-files=@chr16-REFfixed.vcf.gz" -F "input-files=@chr17-REFfixed.vcf.gz" -F "input-files=@chr18-REFfixed.vcf.gz" -F "input-files=@chr19-REFfixed.vcf.gz" -F "input-files=@chr20-REFfixed.vcf.gz" -F "input-files=@chr21-REFfixed.vcf.gz" -F "input-files=@chr22-REFfixed.vcf.gz" \
-          -F "input-build=hg38" -F "input-mode=imputation" -F "input-population=mixed" -F "input-refpanel=apps@topmed-r2@1.0.0" -F "input-phasing=eagle"\
-          https://imputation.biodatacatalyst.nhlbi.nih.gov/api/v2/jobs/submit/imputationserver@1.5.7
-      '''}}}
+    '''
+  }
+}
