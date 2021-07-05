@@ -20,3 +20,4 @@ dependencies:
   - r-hexbin=1.28.1
   - r-data.table=1.12.8
   - java-jdk=8.0.112
+  - csvkit=1.0.5
