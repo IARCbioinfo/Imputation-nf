@@ -17,6 +17,7 @@ COPY environment.yml /
 RUN apt-get update && apt-get install -y procps && apt-get clean -y
 RUN conda env create -n Imputation-nf -f /environment.yml && conda clean -a
 RUN apt-get install -y curl
+RUN apt-get install -y unzip
 
 RUN apt-get install -y cmake python-pip python-dev
 RUN pip install cget 
