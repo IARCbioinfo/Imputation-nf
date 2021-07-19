@@ -307,21 +307,21 @@ process hapmap_peparation{
   awk '{print \$4, \$3}' dataset1  > dataset1.pos
   plink --bfile dataset1 --update-map dataset1.pos --make-bed --out dataset2
 
-  awk -F',' '{print \$1}' pone.0002551.s003.csv | grep -v SNPID > AIM_list.txt
-  plink --bfile dataset2 --extract AIM_list.txt --make-bed --out dataset3
+  #awk -F',' '{print \$1}' pone.0002551.s003.csv | grep -v SNPID > AIM_list.txt
+  #plink --bfile dataset2 --extract AIM_list.txt --make-bed --out dataset3
 
-  plink --freq --bfile dataset3 --make-bed --out dataset4
-  perl !{baseDir}/bin/HRC-1000G-check-bim.pl -b dataset4.bim -f dataset4.frq -r PASS.Variants.TOPMed_freeze5_hg38_dbSNP.tab.gz -h
+  plink --freq --bfile dataset2 --make-bed --out dataset3
+  perl !{baseDir}/bin/HRC-1000G-check-bim.pl -b dataset3.bim -f dataset3.frq -r PASS.Variants.TOPMed_freeze5_hg38_dbSNP.tab.gz -h
 
   bash Run-plink.sh
 
-  awk '{print \$2}' dataset4-updated.fam > ref_samples.txt
+  awk '{print \$2}' dataset3-updated.fam > ref_samples.txt
 
   mkdir hapmap_r23a/
   mv ref_samples.txt hapmap_r23a/ref_samples.txt
-  mv AIM_list.txt hapmap_r23a/AIM_list.txt
-  mv dataset4-updated.bed hapmap_r23a/hapmap_r23a.bed
-  mv dataset4-updated.bim hapmap_r23a/hapmap_r23a.bim
-  mv dataset4-updated.fam hapmap_r23a/hapmap_r23a.fam
+  #mv AIM_list.txt hapmap_r23a/AIM_list.txt
+  mv dataset3-updated.bed hapmap_r23a/hapmap_r23a.bed
+  mv dataset3-updated.bim hapmap_r23a/hapmap_r23a.bim
+  mv dataset3-updated.fam hapmap_r23a/hapmap_r23a.fam
   '''
 }
