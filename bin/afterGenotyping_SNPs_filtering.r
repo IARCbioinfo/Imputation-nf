@@ -7,9 +7,9 @@ summary=data.frame(pop=vector(),n_exclude_SNPs=vector(),n_Chr_SNPs=vector(),n_St
 summary_withoutFreqFilt=data.frame(pop=vector(),n_exclude_SNPs=vector(),n_Chr_SNPs=vector(),n_StrandFlip_SNPs=vector(),n_Pos_SNPs=vector())
 
 exclude_snps_allPop=c()
-for(pop in c("CEU","CHB_JPT","YRI")){
-  pop_dependent_files=c(paste0("Exclude-target_",pop,"-1000G.txt"))
-  non_pop_dependent_files=c(paste0("Chromosome-target_",pop,"-1000G.txt"),paste0("Strand-Flip-target_",pop,"-1000G.txt"),paste0("Position-target_",pop,"-1000G.txt"))
+for(pop in c("ALL")){
+  pop_dependent_files=c(paste0("Exclude-target_",pop,"-HRC.txt"))
+  non_pop_dependent_files=c(paste0("Chromosome-target_",pop,"-HRC.txt"),paste0("Strand-Flip-target_",pop,"-HRC.txt"),paste0("Position-target_",pop,"-HRC.txt"))
 
   freq_filter=paste0("withFreqFiltering_",pop,"/")
   nrow_check_files=c(pop)
@@ -26,18 +26,12 @@ for(pop in c("CEU","CHB_JPT","YRI")){
 as.numeric(summary$n_exclude_SNPs) - as.numeric(summary_withoutFreqFilt$n_exclude_SNPs)
 
 sum_all_probes=data.frame(all_snps=unique(exclude_snps_allPop))
-sum_all_probes$CEU=ifelse(sum_all_probes$all_snps %in% exclude_snps_CEU,T,F)
-sum_all_probes$CHB_JPT=ifelse(sum_all_probes$all_snps %in% exclude_snps_CHB_JPT,T,F)
-sum_all_probes$YRI=ifelse(sum_all_probes$all_snps %in% exclude_snps_YRI,T,F)
+sum_all_probes$ALL=ifelse(sum_all_probes$all_snps %in% exclude_snps_ALL,T,F)
 
-pdf("Probes_filtering_PerAncestryCheckBim.pdf")
-venn_obj=vennCounts(data.frame(sum_all_probes$CEU,sum_all_probes$CHB_JPT,sum_all_probes$YRI))
-vennDiagram( venn_obj,names = c("CEU" , "CHB_JPT" , "YRI"))
-dev.off()
 
 # Hwe filter -----------------------------------------------------
 hwe_filtered_probes=c()
-for(pop in c("CEU","CHB_JPT","YRI")){
+for(pop in c("ALL")){
   before_filtering=fread(paste0("target_",pop,".bim"),header = F,stringsAsFactors = F)
   probes_before_filtering=setDF(before_filtering[,2])[,1]
 
@@ -49,14 +43,7 @@ for(pop in c("CEU","CHB_JPT","YRI")){
 }
 
 sum_all_probes_hwe_filtered=data.frame(all_snps=unique(hwe_filtered_probes),stringsAsFactors = F)
-sum_all_probes_hwe_filtered$CEU=ifelse(sum_all_probes_hwe_filtered$all_snps %in% hwe_filtered_probes_CEU,T,F)
-sum_all_probes_hwe_filtered$CHB_JPT=ifelse(sum_all_probes_hwe_filtered$all_snps %in% hwe_filtered_probes_CHB_JPT,T,F)
-sum_all_probes_hwe_filtered$YRI=ifelse(sum_all_probes_hwe_filtered$all_snps %in% hwe_filtered_probes_YRI,T,F)
-
-pdf("Probes_filtering_PerAncestryGenoHWE.pdf")
-venn_obj=vennCounts(data.frame(sum_all_probes_hwe_filtered$CEU,sum_all_probes_hwe_filtered$CHB_JPT,sum_all_probes_hwe_filtered$YRI))
-vennDiagram( venn_obj,names = c("CEU" , "CHB_JPT" , "YRI"))
-dev.off()
+sum_all_probes_hwe_filtered$ALL=ifelse(sum_all_probes_hwe_filtered$all_snps %in% hwe_filtered_probes_ALL,T,F)
 
 summary(sum_all_probes_hwe_filtered$all_snps %in% sum_all_probes$all_snps)
 summary(sum_all_probes$all_snps %in% sum_all_probes_hwe_filtered$all_snps)

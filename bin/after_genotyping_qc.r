@@ -19,7 +19,7 @@ list_points=list()
 list_hist=list()
 selected_samples$sex_checking_F=NA
 selected_samples$SNP_SEX=NA
-for(pop in c("CEU","CHB_JPT","YRI")){
+for(pop in c("ALL")){
   #qc_path=paste0("out_pop_admixture/1000G_checking_",pop,"/")
 
   # Read sex checking results -----------------------------------------------
@@ -80,7 +80,7 @@ samples_to_annotate_rel=c()
 summary_rel=c()
 selected_samples$relative=NA
 selected_samples$PI_HAT=NA
-for(pop in c("CEU","CHB_JPT","YRI")){
+for(pop in c("ALL")){
   #qc_path=paste0("out_pop_admixture/1000G_checking_",pop,"/")
 
   relatedness=read.table(paste0("target_rel_",pop,".genome"),header = T,stringsAsFactors = F)
@@ -106,7 +106,7 @@ table(selected_samples$relatives_problem,useNA = "always")
 selected_samples$prop_HET=NA
 selected_samples$F_MISS=NA
 list_het=list()
-for(pop in c("CEU","CHB_JPT","YRI")){
+for(pop in c("ALL")){
   #qc_path=paste0("out_pop_admixture/1000G_checking_",pop,"/")
 
   het_imiss=read.table(paste0("het_",pop,".imiss.txt"),header = T,stringsAsFactors = F)
@@ -134,5 +134,5 @@ for(pop in c("CEU","CHB_JPT","YRI")){
 write.table(selected_samples,file="selected_samples_afterSamplesQCsChecking.txt",row.names = F,col.names = T,quote = F,sep="\t",dec=",")
 
 pdf("postGenotyping_samples_QCs.pdf",w=10,h=9)
-grid.arrange(grobs=c(list_hist,list_points,list_het),nrow=3)
+grid.arrange(grobs=c(list_hist,list_points,list_het),nrow=1)
 dev.off()

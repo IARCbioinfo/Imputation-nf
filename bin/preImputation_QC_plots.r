@@ -16,28 +16,24 @@ af_fc=5
 chip <- fread(paste0("target_freq_",pop,".frq"), header = TRUE)
 panel <- fread("ref_freq_withHeader.txt", header = TRUE)
 
-custom_f=function(id,allele){
-  ref=unlist(strsplit(id,":"))[3]
-  alt=unlist(strsplit(id,":"))[4]
-  return(get(allele))
-}
-panel[, ref := mcmapply(custom_f,id,"ref",mc.cores=5L)]
-panel[, alt := mcmapply(custom_f,id,"alt",mc.cores=5L)]
-head(panel)
-summary(panel$ref==panel$a0)
+# custom_f=function(id,allele){
+#   ref=unlist(strsplit(id,":"))[3]
+#   alt=unlist(strsplit(id,":"))[4]
+#   return(get(allele))
+# }
+# panel[, ref := mcmapply(custom_f,id,"ref",mc.cores=5L)]
+# panel[, alt := mcmapply(custom_f,id,"alt",mc.cores=5L)]
+# head(panel)
+# summary(panel$ref==panel$a0)
+# print("test1")
 
-# read SNPs that have ben filtered out
+# read SNPs that have been filtered out
 filtered_SNPs=read.table("filtered_snps.txt",header = F)
 chip=chip[-which(chip$SNP %in% filtered_SNPs$V1 ),]
 
-# Read affy annotation to retrieve SNPs positions and   -------------------
-#probes_IDs=fread(paste0("ID-target_",pop,"-1000G.txt"),header = F) #ancestry_run_04022020/ID-all_cohorts_freq-1000G.txt = ID-target5-1000G.txt
-#head(probes_IDs)
-#colnames(probes_IDs)=c("affy_IDs","ref_IDs")
-
 flip_als=c("A","T","C","G")
 names(flip_als)=c("T","A","G","C")
-chip_updated=chip#merge(chip,probes_IDs,by.x="SNP",by.y="affy_IDs",all.x=T)
+chip_updated=chip
 chip_updated[A1 == "A", A1_flip := "T"]
 chip_updated[A1 == "T", A1_flip := "A"]
 chip_updated[A1 == "G", A1_flip := "C"]
@@ -59,31 +55,28 @@ chip_updated=chip_updated[!which(strand_pb),]
 
 
 # Flip MAF ref don't match the ref of the reference
-custom_f=function(id,a1,a2,a1_flip,maf){
-  if(is.na(unlist(strsplit(id,":"))[4])){
-    id=paste0(id,":NA:",a2,":",a1)
-    ref=unlist(strsplit(id,":"))[4]
-  }else{
-  ref=unlist(strsplit(id,":"))[4]
-  }
-  if(a1!=ref & a1_flip!=ref){
-    return(1-maf)
-  }else{
-    return(maf)}
-}
-chip_updated[, flip_MAF := mcmapply(custom_f,SNP,A1,A2,A1_flip,MAF,mc.cores=2L)]
+# custom_f=function(id,a1,a2,a1_flip,maf){
+#   if(is.na(unlist(strsplit(id,":"))[4])){
+#     id=paste0(id,":NA:",a2,":",a1)
+#     ref=unlist(strsplit(id,":"))[4]
+#   }else{
+#   ref=unlist(strsplit(id,":"))[4]
+#   }
+#   if(a1!=ref & a1_flip!=ref){
+#     return(1-maf)
+#   }else{
+#     return(maf)}
+# }
+# chip_updated[, flip_MAF := mcmapply(custom_f,SNP,A1,A2,A1_flip,MAF,mc.cores=2L)]
 
-custom_f=function(id){
-  id=unlist(strsplit(id,":"))[1]
-  return(id)
-}
-
-#if(is.na(unlist(strsplit(panel$id[1],":"))[4])==FALSE){panel[, id := mcmapply(custom_f,id,mc.cores=2L)]}
 
 # Take an intersection of the panel and chip data
-isec <- merge(chip_updated[,.SD,.SDcols=c(2,10)], panel[,.SD,.SDcols=c("id",pop_ref)], by.x="SNP",by.y="id",all.x=F)
-colnames(isec)
-colnames(isec)[c(3,2)] <- c("AF_PANEL", "AF_CHIP")
+isec <- merge(chip_updated[,.SD,.SDcols=c(2:5,7)], panel[,.SD,.SDcols=c("ID","REF","ALT",pop_ref)], by.x="SNP",by.y="ID",all.x=F)
+colnames(isec)[c(4,8)] <- c("AF_PANEL", "AF_CHIP")
+head(isec)
+
+head(isec[which(isec$A1 != isec$ALT & isec$A1_flip != isec$ALT),])
+isec$AF_PANEL[which(isec$A1 != isec$ALT & isec$A1_flip != isec$ALT)]= 1-isec$AF_PANEL[which(isec$A1 != isec$ALT & isec$A1_flip != isec$ALT)]
 
 isec$AF_diff <- abs(isec$AF_PANEL - isec$AF_CHIP)
 isec$AF_ratio <- isec$AF_CHIP/isec$AF_PANEL

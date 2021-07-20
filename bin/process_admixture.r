@@ -64,3 +64,12 @@ for(pop in unique(target_res$admixture_ancestry)){
   subset_pop=target_res[which(target_res$admixture_ancestry==pop ),c("samples_cohort","samples_ids")]
   write.table(subset_pop,file=paste0("out_pop_admixture/1000G_checking_",pop,"/","samples_",pop,".txt"),row.names = F,col.names = F,quote = F)
 }
+
+# return all samples
+subset_pop=target_res[which(target_res$certainty==T),c("samples_cohort","samples_ids")]
+print(dim(subset_pop))
+system(command = paste0("mkdir out_pop_admixture/1000G_checking_ALL/"))
+write.table(subset_pop,file=paste0("out_pop_admixture/1000G_checking_ALL/","samples_ALL_withCertainty.txt"),row.names = F,col.names = F,quote = F)
+
+subset_pop=target_res[c("samples_cohort","samples_ids")]
+write.table(subset_pop,file=paste0("out_pop_admixture/1000G_checking_ALL/","samples_ALL.txt"),row.names = F,col.names = F,quote = F)
