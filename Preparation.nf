@@ -58,6 +58,7 @@ process topmed_prep{
 
   output:
   file 'PASS.Variants.TOPMed_freeze5_hg38_dbSNP.tab.gz' into legend_file
+  file 'bravo-dbsnp-all.vcf.gz*' into vcf_file
 
   shell:
   '''
@@ -65,6 +66,7 @@ process topmed_prep{
   curl -O https://www.well.ox.ac.uk/~wrayner/tools/CreateTOPMed.zip
   unzip CreateTOPMed.zip
   ./CreateTOPMed.pl -i bravo-dbsnp-all.vcf.gz -o PASS.Variants.TOPMed_freeze5_hg38_dbSNP.tab.gz
+  bcftools index bravo-dbsnp-all.vcf.gz
   '''
 }
 
