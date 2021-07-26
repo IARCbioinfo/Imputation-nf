@@ -106,7 +106,6 @@ params.token_Michighan = null
 params.token_TOPMed = null
 params.imputationbot_password = null
 
-params.adm_files="/mnt/c/Aurelie/iarc_work/Imputation-nf/tests_pipeline/data/merge.3.Q"
 
 params.QC_cloud = null
 
@@ -161,7 +160,6 @@ params.QC_cloud = null
 
     input:
     file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
-    file data from Channel.fromPath(params.adm_files).collect()
     file data from Channel.fromPath(params.originDir+"*").collect()
     file data from TargetUpdate.collect()
 
@@ -207,7 +205,7 @@ params.QC_cloud = null
     join -11 -22 ref_ind.txt relationships_w_pops_121708_2.txt | awk '{print $1, $7}' | awk '{if( $2 == "CEU") print $0,1,1; else { if($2 == "YRI") print $0,2,1; else {print $0,3,1}}}' > ind_pop.txt
     Rscript !{baseDir}/bin/create_pop_file.r merge_pruned.fam ind_pop.txt merge_pruned.pop
     K=3
-    #admixture --cv merge_pruned.bed $K --supervised -j4 | tee log${K}.out
+    admixture --cv merge_pruned.bed $K --supervised -j4 | tee log${K}.out
     Rscript !{baseDir}/bin/process_admixture.r !{params.target}-updated
 
     ############################################################################################
