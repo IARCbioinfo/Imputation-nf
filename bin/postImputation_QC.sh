@@ -12,9 +12,9 @@ if [ $pop = "ALL" ]
 then
   # Generate the reference frequency file
   # Generate a tab-delimited header
-  echo -e 'CHR\tSNP\tREF\tALT\tAF\tEUR_AF\tAFR_AF\tEAS_AF' > 1000GP_chr${chr}_imputation_all.frq
+  echo -e 'CHR\tSNP\tREF\tALT\tAF' > TOPMed_chr${chr}_imputation_all.frq
   # Query the required fields from the VCF file and append to the allele frequency file
-  bcftools query -f '%CHROM\t%CHROM\_%POS\_%REF\_%ALT\t%REF\t%ALT\t%INFO/AF\t%INFO/EUR_AF\t%INFO/AFR_AF\t%INFO/EAS_AF\n' ALL.chr${chr}_GRCh38.genotypes.20170504.bcf >> 1000GP_chr${chr}_imputation_all.frq
+  bcftools view bravo-dbsnp-all.vcf.gz --regions chr${chr} | bcftools query -f '%CHROM\t%CHROM\_%POS\_%REF\_%ALT\t%REF\t%ALT\t%INFO/AF\n' >> TOPMed_chr${chr}_imputation_all.frq
 
   # Generate a header for the output file
   echo -e 'CHR\tSNP\tREF\tALT\tAF\tINFO\tAF_GROUP' > INFO_group_chr${chr}.txt

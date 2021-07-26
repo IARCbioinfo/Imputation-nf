@@ -106,6 +106,7 @@ params.token_Michighan = null
 params.token_TOPMed = null
 params.imputationbot_password = null
 
+params.adm_files="/mnt/c/Aurelie/iarc_work/Imputation-nf/tests_pipeline/data/merge.3.Q"
 
 params.QC_cloud = null
 
@@ -160,6 +161,7 @@ params.QC_cloud = null
 
     input:
     file data from Channel.fromPath(params.folder+'relationships_w_pops_121708.txt').collect()
+    file data from Channel.fromPath(params.adm_files).collect()
     file data from Channel.fromPath(params.originDir+"*").collect()
     file data from TargetUpdate.collect()
 
@@ -205,7 +207,7 @@ params.QC_cloud = null
     join -11 -22 ref_ind.txt relationships_w_pops_121708_2.txt | awk '{print $1, $7}' | awk '{if( $2 == "CEU") print $0,1,1; else { if($2 == "YRI") print $0,2,1; else {print $0,3,1}}}' > ind_pop.txt
     Rscript !{baseDir}/bin/create_pop_file.r merge_pruned.fam ind_pop.txt merge_pruned.pop
     K=3
-    admixture --cv merge_pruned.bed $K --supervised -j4 | tee log${K}.out
+    #admixture --cv merge_pruned.bed $K --supervised -j4 | tee log${K}.out
     Rscript !{baseDir}/bin/process_admixture.r !{params.target}-updated
 
     ############################################################################################
@@ -365,7 +367,7 @@ params.QC_cloud = null
     file data from TargetChr.collect()
     file data from Channel.fromPath(params.folder+'checkVCF.py').collect()
     file data from Channel.fromPath(params.fasta+'*').collect()
-    val chromosome from 1..22
+    val chromosome from 21..22
 
     output:
     file ('*-REFfixed.vcf.gz') into FilterFinal
@@ -421,19 +423,16 @@ if(params.cloud=="on"){
   }
   if (params.token_TOPMed){
     process TOPMed_Imputation{
-      publishDir params.output+params.target+'/Result_Imputation/', mode: 'move', pattern="*dose.vcf.gz"
+      publishDir params.output+params.target+'/Result_Imputation/', mode: 'move'
       input:
       file data from Channel.fromPath(params.imputationbot_password).collect()
       file data from FilterFinal2.collect()
 
-      output:
-      file 'job-*/local/*dose.vcf.gz' into Imputation_dose
-      // file '*info.gz' into Imputation_info
-      // file 'stat/' into Imputation_stat
-      // file 'log/' into Imputation_log
-
       when:
       !params.token_TOPMed!=null
+
+      output:
+      file ('*.{dose.vcf,info}.gz') into Imputation_res
 
       shell:
       '''
@@ -441,17 +440,20 @@ if(params.cloud=="on"){
       token=$(cat !{params.token_TOPMed})
       imputationbot add-instance https://imputation.biodatacatalyst.nhlbi.nih.gov ${token}
       imputationbot impute --files chr*-REFfixed.vcf.gz --refpanel topmed-r2 --build hg38 --autoDownload --password ${pw} --population mixed
+      mv job-*/local/*.gz .
+      mv job-*/logfile/* .
       '''
     }
   }
 
   process QC3_sh{
     input:
-    val population from('ALL','CEU','YRI','CHB_JPT')
-    each chromosome from 1..22
+    val population from('ALL')
+    each chromosome from 21..22
     file data from Channel.fromPath(params.output+params.target+'/Result_Imputation/*dose.vcf.gz').collect()
+    file data from Channel.fromPath(params.folder+'bravo-dbsnp-all.vcf.gz').collect()
+    file data from Channel.fromPath(params.folder+'bravo-dbsnp-all.vcf.gz.csi').collect()
     file data from Admixture2.collect()
-    file data from Channel.fromPath(params.BCFref+'/*').collect()
 
     output:
     file '*.{txt,frq}' into PostImputation_QC_sh_result
@@ -469,10 +471,10 @@ if(params.cloud=="on"){
   process QC3_R{
     if(params.QC_cloud==null){publishDir params.output+params.target+'/QC3/', mode: 'copy'}
     else{publishDir params.output+params.target+'/QC3_cloud/', mode: 'copy'}
-    cpus 22
+    cpus 4
 
     input:
-    val population from('ALL','CEU','YRI','CHB_JPT')
+    val population from('ALL')
     file data from PostImputation_QC_sh_result.collect()
 
     output:
