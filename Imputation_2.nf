@@ -285,7 +285,7 @@ params.QC_cloud = null
 
     ## -- 10 : AF based filter
     plink --freq --bfile target_${pop} --output-chr chr26 --out target_freq_${pop}
-    perl !{baseDir}/bin/HRC-1000G-check-bim.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r !{params.legend} -h
+    perl !{baseDir}/bin/HRC-1000G-check-bim.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r !{legend_file} -h #!{params.legend}
     mkdir withFreqFiltering_${pop}
     cp *-HRC* Run-plink.sh withFreqFiltering_${pop}
 
