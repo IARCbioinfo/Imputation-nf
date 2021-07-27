@@ -278,14 +278,16 @@ params.QC_cloud = null
     file ('target_hwe_*.bim') into HWresult
     file ('target_freq_*.frq') into FreqResult
     file ('ID-target_*-HRC.txt') into FreqResultId
+    file data from Channel.fromPath(params.legend).collect()
 
     shell:
     '''
     pop=!{rspop}
+    leg=!{params.legend}
 
     ## -- 10 : AF based filter
     plink --freq --bfile target_${pop} --output-chr chr26 --out target_freq_${pop}
-    perl !{baseDir}/bin/HRC-1000G-check-bim.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r !{legend_file} -h #!{params.legend}
+    perl !{baseDir}/bin/HRC-1000G-check-bim.pl -b target_${pop}.bim -f target_freq_${pop}.frq -r ${leg##*/} -h 
     mkdir withFreqFiltering_${pop}
     cp *-HRC* Run-plink.sh withFreqFiltering_${pop}
 
