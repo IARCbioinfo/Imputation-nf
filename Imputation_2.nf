@@ -272,13 +272,13 @@ params.QC_cloud = null
     input:
     file data from TargetFilter.collect()
     val rspop from Channel.from("ALL")
+    file data from Channel.fromPath(params.legend).collect()
 
     output:
     file ('withFreqFiltering_*') into DirFiltering
     file ('target_hwe_*.bim') into HWresult
     file ('target_freq_*.frq') into FreqResult
     file ('ID-target_*-HRC.txt') into FreqResultId
-    file data from Channel.fromPath(params.legend).collect()
 
     shell:
     '''
