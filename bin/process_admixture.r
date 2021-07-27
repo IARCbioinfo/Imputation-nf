@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 K=3
-admixture_Q=read.table(paste0("merge.",K,".Q"),header = F)
+admixture_Q=read.table(paste0("merge_pruned.",K,".Q"),header = F)
 n_groups=ncol(admixture_Q)
 
 target_name = as.character(commandArgs(TRUE)[1])
